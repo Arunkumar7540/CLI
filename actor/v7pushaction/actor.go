@@ -15,11 +15,8 @@ type Actor struct {
 	V2Actor     V2Actor
 	V7Actor     V7Actor
 
-	PushPlanFuncs []UpdatePushPlanFunc
-
-	ChangeApplicationFuncs []ChangeApplicationFunc
-	StartFuncs             []ChangeApplicationFunc
-	NoStartFuncs           []ChangeApplicationFunc
+	PreparePushPlanSequence   []UpdatePushPlanFunc
+	ChangeApplicationSequence []ChangeApplicationFunc
 
 	startWithProtocol *regexp.Regexp
 	urlValidator      *regexp.Regexp
@@ -39,7 +36,7 @@ func NewActor(v2Actor V2Actor, v3Actor V7Actor, sharedActor SharedActor) *Actor 
 		urlValidator:      regexp.MustCompile(URLRegexp),
 	}
 
-	actor.PushPlanFuncs = []UpdatePushPlanFunc{
+	actor.PreparePushPlanSequence = []UpdatePushPlanFunc{
 		SetupApplicationForPushPlan,
 		SetupDockerImageCredentialsForPushPlan,
 		SetupBitsPathForPushPlan,
@@ -51,24 +48,32 @@ func NewActor(v2Actor V2Actor, v3Actor V7Actor, sharedActor SharedActor) *Actor 
 		SetupUpdateWebProcessForPushPlan,
 	}
 
-	actor.ChangeApplicationFuncs = []ChangeApplicationFunc{
-		actor.UpdateApplication,
-		actor.UpdateRoutesForApplication,
-		actor.ScaleWebProcessForApplication,
-		actor.UpdateWebProcessForApplication,
-		actor.CreateBitsPackageForApplication,
-		actor.CreateDockerPackageForApplication,
-		actor.CreateDropletForApplication,
-	}
+	actor.ChangeApplicationSequence = []ChangeApplicationFunc{
+		RunIf(ShouldUpdateApplication, actor.UpdateApplication),
+		RunIf(ShouldUpdateRoutes, actor.UpdateRoutesForApplication),
+		RunIf(ShouldScaleWebProcess, actor.ScaleWebProcessForApplication),
+		RunIf(ShouldUpdateWebProcess, actor.UpdateWebProcessForApplication),
+		RunIf(ShouldCreateBitsPackage, actor.CreateBitsPackageForApplication),
+		RunIf(ShouldCreateDockerPackage, actor.CreateDockerPackageForApplication),
+		RunIf(ShouldCreateDroplet, actor.CreateDropletForApplication),
+		RunIf(ShouldStagePackage, actor.StagePackageForApplication),
+		RunIf(ShouldStopApplication, actor.StopApplication),
+		RunIf(ShouldSetDroplet, actor.SetDropletForApplication),
 
-	actor.StartFuncs = []ChangeApplicationFunc{
-		actor.StagePackageForApplication,
-		actor.SetDropletForApplication,
-	}
+		//RunIf(And(DropletPathSet, Not(NoStartFlagSet)), F),
+		//RunIfElse(Predicate, F1, F2),
+		//RunSequence(...Fs),
 
-	actor.NoStartFuncs = []ChangeApplicationFunc{
-		actor.StopApplication,
-		actor.ConditionallyRunFunc(actor.IsDropletPathSet, actor.SetDropletForApplication),
+		//RunIf(
+		//	IsDocker, RunSequence(
+		//		F1,
+		//		F2,
+		//		F3)),
+		//RunIf(
+		//	IsBits, RunSequence(
+		//		F4,
+		//		F5,
+		//		F6)),
 	}
 
 	return actor
