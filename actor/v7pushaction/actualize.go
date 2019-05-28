@@ -22,7 +22,7 @@ func (actor Actor) Actualize(plan PushPlan, progressBar ProgressBar) (
 
 		var err error
 		var warnings Warnings
-		for _, changeAppFunc := range actor.ChangeApplicationSequence {
+		for _, changeAppFunc := range actor.ChangeApplicationSequence(plan) {
 			plan, warnings, err = changeAppFunc(plan, eventStream, progressBar)
 			warningsStream <- warnings
 			if err != nil {

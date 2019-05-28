@@ -16,7 +16,7 @@ type Actor struct {
 	V7Actor     V7Actor
 
 	PreparePushPlanSequence   []UpdatePushPlanFunc
-	ChangeApplicationSequence []ChangeApplicationFunc
+	ChangeApplicationSequence func(plan PushPlan) []ChangeApplicationFunc
 
 	startWithProtocol *regexp.Regexp
 	urlValidator      *regexp.Regexp
@@ -48,32 +48,12 @@ func NewActor(v2Actor V2Actor, v3Actor V7Actor, sharedActor SharedActor) *Actor 
 		SetupUpdateWebProcessForPushPlan,
 	}
 
-	actor.ChangeApplicationSequence = []ChangeApplicationFunc{
-		RunIf(ShouldUpdateApplication, actor.UpdateApplication),
-		RunIf(ShouldUpdateRoutes, actor.UpdateRoutesForApplication),
-		RunIf(ShouldScaleWebProcess, actor.ScaleWebProcessForApplication),
-		RunIf(ShouldUpdateWebProcess, actor.UpdateWebProcessForApplication),
-		RunIf(ShouldCreateBitsPackage, actor.CreateBitsPackageForApplication),
-		RunIf(ShouldCreateDockerPackage, actor.CreateDockerPackageForApplication),
-		RunIf(ShouldCreateDroplet, actor.CreateDropletForApplication),
-		RunIf(ShouldStagePackage, actor.StagePackageForApplication),
-		RunIf(ShouldStopApplication, actor.StopApplication),
-		RunIf(ShouldSetDroplet, actor.SetDropletForApplication),
-
-		//RunIf(And(DropletPathSet, Not(NoStartFlagSet)), F),
-		//RunIfElse(Predicate, F1, F2),
-		//RunSequence(...Fs),
-
-		//RunIf(
-		//	IsDocker, RunSequence(
-		//		F1,
-		//		F2,
-		//		F3)),
-		//RunIf(
-		//	IsBits, RunSequence(
-		//		F4,
-		//		F5,
-		//		F6)),
+	actor.ChangeApplicationSequence = func(plan PushPlan) []ChangeApplicationFunc {
+		var sequence []ChangeApplicationFunc
+		sequence = append(sequence, actor.GetUpdateSequence(plan)...)
+		sequence = append(sequence, actor.GetPrepareApplicationSourceSequence(plan)...)
+		sequence = append(sequence, actor.GetRuntimeSequence(plan)...)
+		return sequence
 	}
 
 	return actor
