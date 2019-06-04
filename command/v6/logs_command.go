@@ -1,6 +1,7 @@
 package v6
 
 import (
+	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 	"github.com/cloudfoundry/noaa/consumer"
 
 	"code.cloudfoundry.org/cli/actor/sharedaction"
@@ -13,7 +14,7 @@ import (
 //go:generate counterfeiter . LogsActor
 
 type LogsActor interface {
-	GetRecentLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client v2action.NOAAClient) ([]v2action.LogMessage, v2action.Warnings, error)
+	GetRecentLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client v2action.LogCacheClient) ([]v2action.LogMessage, v2action.Warnings, error)
 	GetStreamingLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client v2action.NOAAClient) (<-chan *v2action.LogMessage, <-chan error, v2action.Warnings, error)
 }
 
@@ -23,11 +24,12 @@ type LogsCommand struct {
 	usage           interface{}  `usage:"CF_NAME logs APP_NAME"`
 	relatedCommands interface{}  `related_commands:"app, apps, ssh"`
 
-	UI          command.UI
-	Config      command.Config
-	SharedActor command.SharedActor
-	Actor       LogsActor
-	NOAAClient  *consumer.Consumer
+	UI             command.UI
+	Config         command.Config
+	SharedActor    command.SharedActor
+	Actor          LogsActor
+	NOAAClient     *consumer.Consumer
+	LogCacheClient *logcache.Client
 }
 
 func (cmd *LogsCommand) Setup(config command.Config, ui command.UI) error {
@@ -77,7 +79,7 @@ func (cmd LogsCommand) displayRecentLogs() error {
 	messages, warnings, err := cmd.Actor.GetRecentLogsForApplicationByNameAndSpace(
 		cmd.RequiredArgs.AppName,
 		cmd.Config.TargetedSpace().GUID,
-		cmd.NOAAClient,
+		cmd.LogCacheClient,
 	)
 
 	for _, message := range messages {

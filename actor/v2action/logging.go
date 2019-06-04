@@ -1,12 +1,13 @@
 package v2action
 
 import (
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
+	"context"
 	"sort"
 	"sync"
 	"time"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
-	"github.com/cloudfoundry/noaa"
 	noaaErrors "github.com/cloudfoundry/noaa/errors"
 	"github.com/cloudfoundry/sonde-go/events"
 	log "github.com/sirupsen/logrus"
@@ -18,7 +19,7 @@ var flushInterval = 300 * time.Millisecond
 
 type LogMessage struct {
 	message        string
-	messageType    events.LogMessage_MessageType
+	messageType    events.LogMessage_MessageType //TODO make this a string?
 	timestamp      time.Time
 	sourceType     string
 	sourceInstance string
@@ -87,28 +88,41 @@ func (actor Actor) GetStreamingLogs(appGUID string, client NOAAClient) (<-chan *
 	return outgoingLogStream, outgoingErrStream
 }
 
-func (actor Actor) GetRecentLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client NOAAClient) ([]LogMessage, Warnings, error) {
+func (actor Actor) GetRecentLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client LogCacheClient) ([]LogMessage, Warnings, error) {
 	app, allWarnings, err := actor.GetApplicationByNameAndSpace(appName, spaceGUID)
 	if err != nil {
 		return nil, allWarnings, err
 	}
 
-	noaaMessages, err := client.RecentLogs(app.GUID, actor.Config.AccessToken())
-	if err != nil {
-		return nil, allWarnings, err
-	}
+	envelopes, err := client.Read(
+		context.Background(),
+		app.GUID,
+		time.Time{},
+		//TODO logcache.WithEnvelopeTypes(o.envelopeType),
+		//TODO logcache.WithLimit(o.lines),
+		//TODO logcache.WithDescending(),
+	)
 
-	noaaMessages = noaa.SortRecent(noaaMessages)
-
+	//noaaMessages, err := client.RecentLogs(app.GUID, actor.Config.AccessToken())
+	//if err != nil {
+	//	return nil, allWarnings, err
+	//}
+	//
+	//noaaMessages = noaa.SortRecent(noaaMessages)
+	//
 	var logMessages []LogMessage
 
-	for _, message := range noaaMessages {
+	for i := len(envelopes) - 1; i >= 0; i-- {
+		//TODO check type
+		envelope := envelopes[i]
+		log := envelope.GetMessage().(*loggregator_v2.Envelope_Log).Log
+
 		logMessages = append(logMessages, LogMessage{
-			message:        string(message.GetMessage()),
-			messageType:    message.GetMessageType(),
-			timestamp:      time.Unix(0, message.GetTimestamp()),
-			sourceType:     message.GetSourceType(),
-			sourceInstance: message.GetSourceInstance(),
+			message:        string(log.Payload),
+			messageType:    events.LogMessage_MessageType(log.Type),
+			timestamp:      time.Unix(0, envelope.GetTimestamp()),
+			sourceType:     envelope.GetTags()["source_type"], //TODO magical constant
+			sourceInstance: envelope.GetInstanceId(),
 		})
 	}
 
