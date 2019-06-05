@@ -1,6 +1,11 @@
 package v6
 
 import (
+	"crypto/tls"
+	"net"
+	"net/http"
+	"time"
+
 	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 	"github.com/cloudfoundry/noaa/consumer"
 
@@ -32,6 +37,18 @@ type LogsCommand struct {
 	LogCacheClient *logcache.Client
 }
 
+type tokenHTTPClient struct {
+	c           logcache.HTTPClient
+	accessToken func() string
+}
+
+func (c *tokenHTTPClient) Do(req *http.Request) (*http.Response, error) {
+	req.Header.Set("Authorization", c.accessToken())
+
+	return c.c.Do(req)
+
+}
+
 func (cmd *LogsCommand) Setup(config command.Config, ui command.UI) error {
 	cmd.UI = ui
 	cmd.Config = config
@@ -44,6 +61,21 @@ func (cmd *LogsCommand) Setup(config command.Config, ui command.UI) error {
 	cmd.Actor = v2action.NewActor(ccClient, uaaClient, config)
 
 	cmd.NOAAClient = shared.NewNOAAClient(ccClient.DopplerEndpoint(), config, uaaClient, ui)
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: config.SkipSSLValidation(),
+		},
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			KeepAlive: 30 * time.Second,
+			Timeout:   config.DialTimeout(),
+		}).DialContext,
+	}
+	cmd.LogCacheClient = logcache.NewClient(ccClient.LogCacheEndpoint(), logcache.WithHTTPClient(&tokenHTTPClient{
+		c:           &http.Client{Transport: tr},
+		accessToken: config.AccessToken,
+	}))
 
 	return nil
 }

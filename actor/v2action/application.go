@@ -232,7 +232,7 @@ func (actor Actor) SetApplicationHealthCheckTypeByNameAndSpace(name string, spac
 // StartApplication restarts a given application. If already stopped, no stop
 // call will be sent.
 func (actor Actor) StartApplication(app Application, client NOAAClient) (<-chan *LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
-	messages, logErrs := actor.GetStreamingLogs(app.GUID, client)
+	messages, logErrs := actor.GetStreamingLogs(app.GUID, nil)
 
 	appState := make(chan ApplicationStateChange)
 	allWarnings := make(chan string)
@@ -269,7 +269,7 @@ func (actor Actor) StartApplication(app Application, client NOAAClient) (<-chan 
 // RestartApplication restarts a given application. If already stopped, no stop
 // call will be sent.
 func (actor Actor) RestartApplication(app Application, client NOAAClient) (<-chan *LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
-	messages, logErrs := actor.GetStreamingLogs(app.GUID, client)
+	messages, logErrs := actor.GetStreamingLogs(app.GUID, nil)
 
 	appState := make(chan ApplicationStateChange)
 	allWarnings := make(chan string)
@@ -321,7 +321,7 @@ func (actor Actor) RestartApplication(app Application, client NOAAClient) (<-cha
 // RestageApplication restarts a given application. If already stopped, no stop
 // call will be sent.
 func (actor Actor) RestageApplication(app Application, client NOAAClient) (<-chan *LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
-	messages, logErrs := actor.GetStreamingLogs(app.GUID, client)
+	messages, logErrs := actor.GetStreamingLogs(app.GUID, nil)
 
 	appState := make(chan ApplicationStateChange)
 	allWarnings := make(chan string)

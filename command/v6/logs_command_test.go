@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/cli/command/v6/v6fakes"
 	"code.cloudfoundry.org/cli/util/configv3"
 	"code.cloudfoundry.org/cli/util/ui"
+	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 	"github.com/cloudfoundry/noaa/consumer"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,6 +25,7 @@ var _ = Describe("logs command", func() {
 		fakeConfig      *commandfakes.FakeConfig
 		fakeSharedActor *commandfakes.FakeSharedActor
 		fakeActor       *v6fakes.FakeLogsActor
+		logCacheClient  *logcache.Client
 		noaaClient      *consumer.Consumer
 		binaryName      string
 		executeErr      error
@@ -35,13 +37,15 @@ var _ = Describe("logs command", func() {
 		fakeSharedActor = new(commandfakes.FakeSharedActor)
 		fakeActor = new(v6fakes.FakeLogsActor)
 		noaaClient = new(consumer.Consumer)
+		logCacheClient = new(logcache.Client)
 
 		cmd = LogsCommand{
-			UI:          testUI,
-			Config:      fakeConfig,
-			SharedActor: fakeSharedActor,
-			Actor:       fakeActor,
-			NOAAClient:  noaaClient,
+			UI:             testUI,
+			Config:         fakeConfig,
+			SharedActor:    fakeSharedActor,
+			Actor:          fakeActor,
+			LogCacheClient: logCacheClient,
+			NOAAClient:     noaaClient,
 		}
 
 		binaryName = "faceman"
@@ -142,7 +146,7 @@ var _ = Describe("logs command", func() {
 
 					Expect(appName).To(Equal("some-app"))
 					Expect(spaceGUID).To(Equal("some-space-guid"))
-					Expect(client).To(Equal(noaaClient))
+					Expect(client).To(Equal(logCacheClient))
 				})
 			})
 		})

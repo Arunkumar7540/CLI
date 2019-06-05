@@ -1,7 +1,9 @@
 package v2action_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"code.cloudfoundry.org/cli/actor/actionerror"
@@ -9,6 +11,7 @@ import (
 	"code.cloudfoundry.org/cli/actor/v2action/v2actionfakes"
 	"code.cloudfoundry.org/cli/api/cloudcontroller/ccv2"
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
+	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 	noaaErrors "github.com/cloudfoundry/noaa/errors"
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
@@ -55,8 +58,6 @@ var _ = Describe("Logging Actions", func() {
 
 			messages <-chan *LogMessage
 			errs     <-chan error
-
-			message *LogMessage
 		)
 
 		BeforeEach(func() {
@@ -69,97 +70,46 @@ var _ = Describe("Logging Actions", func() {
 		})
 
 		JustBeforeEach(func() {
-			messages, errs = actor.GetStreamingLogs(expectedAppGUID, fakeNOAAClient)
+			messages, errs = actor.GetStreamingLogs(expectedAppGUID, fakeLogCacheClient)
 		})
 
-		When("receiving events", func() {
+		FWhen("receiving logs", func() {
 			BeforeEach(func() {
 				fakeConfig.DialTimeoutReturns(60 * time.Minute)
+				fakeLogCacheClient.ReadStub = func(
+					ctx context.Context,
+					sourceID string,
+					start time.Time,
+					opts ...logcache.ReadOption,
+				) ([]*loggregator_v2.Envelope, error) {
+					var fullEnvelopeSet []*loggregator_v2.Envelope
+					for i := 0; i < 100; i++ {
+						fullEnvelopeSet = append(fullEnvelopeSet, &loggregator_v2.Envelope{
+							Timestamp:  time.Now().UnixNano(),
+							SourceId:   "some-app-guid",
+							InstanceId: "some-source-instance",
+							Message: &loggregator_v2.Envelope_Log{
+								Log: &loggregator_v2.Log{
+									Payload: []byte(fmt.Sprintf("message-%d", i)),
+									Type:    loggregator_v2.Log_OUT,
+								},
+							},
+							Tags: map[string]string{
+								"source_type": "some-source-type",
+							},
+						})
+					}
 
-				fakeNOAAClient.TailingLogsStub = func(appGUID string, authToken string) (<-chan *events.LogMessage, <-chan error) {
-					Expect(appGUID).To(Equal(expectedAppGUID))
-					Expect(authToken).To(Equal("AccessTokenForTest"))
-
-					Expect(fakeNOAAClient.SetOnConnectCallbackCallCount()).To(Equal(1))
-					onConnectOrOnRetry := fakeNOAAClient.SetOnConnectCallbackArgsForCall(0)
-
-					eventStream := make(chan *events.LogMessage)
-					errStream := make(chan error, 1)
-
-					go func() {
-						defer close(eventStream)
-						defer close(errStream)
-						onConnectOrOnRetry()
-
-						outMessage := events.LogMessage_OUT
-						ts1 := int64(10)
-						sourceType := "some-source-type"
-						sourceInstance := "some-source-instance"
-
-						eventStream <- &events.LogMessage{
-							Message:        []byte("message-1"),
-							MessageType:    &outMessage,
-							Timestamp:      &ts1,
-							SourceType:     &sourceType,
-							SourceInstance: &sourceInstance,
-						}
-
-						errMessage := events.LogMessage_ERR
-						ts2 := int64(20)
-
-						eventStream <- &events.LogMessage{
-							Message:        []byte("message-2"),
-							MessageType:    &errMessage,
-							Timestamp:      &ts2,
-							SourceType:     &sourceType,
-							SourceInstance: &sourceInstance,
-						}
-
-						ts3 := int64(0)
-						eventStream <- &events.LogMessage{
-							Message:        []byte("message-3"),
-							MessageType:    &outMessage,
-							Timestamp:      &ts3,
-							SourceType:     &sourceType,
-							SourceInstance: &sourceInstance,
-						}
-
-						ts4 := int64(15)
-						eventStream <- &events.LogMessage{
-							Message:        []byte("message-4"),
-							MessageType:    &errMessage,
-							Timestamp:      &ts4,
-							SourceType:     &sourceType,
-							SourceInstance: &sourceInstance,
-						}
-					}()
-
-					return eventStream, errStream
+					if fakeLogCacheClient.ReadCallCount() > 1 {
+						return fullEnvelopeSet[:50], nil
+					}
+					return fullEnvelopeSet, nil
 				}
 			})
 
 			It("converts them to log messages, sorts them, and passes them through the messages channel", func() {
-				Eventually(messages).Should(Receive(&message))
-				Expect(message.Message()).To(Equal("message-3"))
-				Expect(message.Type()).To(Equal("OUT"))
-				Expect(message.Timestamp()).To(Equal(time.Unix(0, 0)))
-				Expect(message.SourceType()).To(Equal("some-source-type"))
-				Expect(message.SourceInstance()).To(Equal("some-source-instance"))
-
-				Eventually(messages).Should(Receive(&message))
-				Expect(message.Message()).To(Equal("message-1"))
-				Expect(message.Type()).To(Equal("OUT"))
-				Expect(message.Timestamp()).To(Equal(time.Unix(0, 10)))
-
-				Eventually(messages).Should(Receive(&message))
-				Expect(message.Message()).To(Equal("message-4"))
-				Expect(message.Type()).To(Equal("ERR"))
-				Expect(message.Timestamp()).To(Equal(time.Unix(0, 15)))
-
-				Eventually(messages).Should(Receive(&message))
-				Expect(message.Message()).To(Equal("message-2"))
-				Expect(message.Type()).To(Equal("ERR"))
-				Expect(message.Timestamp()).To(Equal(time.Unix(0, 20)))
+				Eventually(messages).Should(HaveLen(150))
+				Expect(errs).ToNot(Receive())
 			})
 		})
 
@@ -337,11 +287,9 @@ var _ = Describe("Logging Actions", func() {
 
 			When("Log Cache returns logs", func() {
 				BeforeEach(func() {
-					ts1 := int64(10)
-					ts2 := int64(20)
 					messages := []*loggregator_v2.Envelope{
 						{
-							Timestamp:  ts2,
+							Timestamp:  int64(20),
 							SourceId:   "some-app-guid",
 							InstanceId: "some-source-instance",
 							Message: &loggregator_v2.Envelope_Log{
@@ -355,7 +303,7 @@ var _ = Describe("Logging Actions", func() {
 							},
 						},
 						{
-							Timestamp:  ts1,
+							Timestamp:  int64(10),
 							SourceId:   "some-app-guid",
 							InstanceId: "some-source-instance",
 							Message: &loggregator_v2.Envelope_Log{
@@ -373,13 +321,7 @@ var _ = Describe("Logging Actions", func() {
 					fakeLogCacheClient.ReadReturns(messages, nil)
 				})
 
-				XIt("passes a nonempty access token to the NOAA client", func() {
-					actor.GetRecentLogsForApplicationByNameAndSpace("some-app", "some-space-guid", fakeLogCacheClient)
-					_, accessToken := fakeNOAAClient.RecentLogsArgsForCall(0)
-					Expect(accessToken).To(Equal("AccessTokenForTest"))
-				})
-
-				FIt("returns all the recent logs and warnings", func() {
+				It("returns all the recent logs and warnings", func() {
 					messages, warnings, err := actor.GetRecentLogsForApplicationByNameAndSpace("some-app", "some-space-guid", fakeLogCacheClient)
 					Expect(err).ToNot(HaveOccurred())
 					Expect(warnings).To(ConsistOf("some-app-warnings"))
@@ -395,6 +337,30 @@ var _ = Describe("Logging Actions", func() {
 					Expect(messages[1].Timestamp()).To(Equal(time.Unix(0, 20)))
 					Expect(messages[1].SourceType()).To(Equal("some-source-type"))
 					Expect(messages[1].SourceInstance()).To(Equal("some-source-instance"))
+				})
+			})
+
+			When("Log Cache returns non-log envelopes", func() {
+				BeforeEach(func() {
+					messages := []*loggregator_v2.Envelope{
+						{
+							Timestamp:  int64(10),
+							SourceId:   "some-app-guid",
+							InstanceId: "some-source-instance",
+							Message:    &loggregator_v2.Envelope_Counter{},
+							Tags: map[string]string{
+								"source_type": "some-source-type",
+							},
+						},
+					}
+
+					fakeLogCacheClient.ReadReturns(messages, nil)
+				})
+
+				It("ignores them", func() {
+					messages, _, err := actor.GetRecentLogsForApplicationByNameAndSpace("some-app", "some-space-guid", fakeLogCacheClient)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(messages).To(BeEmpty())
 				})
 			})
 
