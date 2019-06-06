@@ -1,26 +1,25 @@
 package v6
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"net/http"
 	"time"
-
-	logcache "code.cloudfoundry.org/log-cache/pkg/client"
-	"github.com/cloudfoundry/noaa/consumer"
 
 	"code.cloudfoundry.org/cli/actor/sharedaction"
 	"code.cloudfoundry.org/cli/actor/v2action"
 	"code.cloudfoundry.org/cli/command"
 	"code.cloudfoundry.org/cli/command/flag"
 	"code.cloudfoundry.org/cli/command/v6/shared"
+	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 )
 
 //go:generate counterfeiter . LogsActor
 
 type LogsActor interface {
 	GetRecentLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client v2action.LogCacheClient) ([]v2action.LogMessage, v2action.Warnings, error)
-	GetStreamingLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client v2action.NOAAClient) (<-chan *v2action.LogMessage, <-chan error, v2action.Warnings, error)
+	GetStreamingLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client v2action.LogCacheClient) (<-chan *v2action.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc)
 }
 
 type LogsCommand struct {
@@ -33,7 +32,6 @@ type LogsCommand struct {
 	Config         command.Config
 	SharedActor    command.SharedActor
 	Actor          LogsActor
-	NOAAClient     *consumer.Consumer
 	LogCacheClient *logcache.Client
 }
 
@@ -59,8 +57,6 @@ func (cmd *LogsCommand) Setup(config command.Config, ui command.UI) error {
 		return err
 	}
 	cmd.Actor = v2action.NewActor(ccClient, uaaClient, config)
-
-	cmd.NOAAClient = shared.NewNOAAClient(ccClient.DopplerEndpoint(), config, uaaClient, ui)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
@@ -123,10 +119,10 @@ func (cmd LogsCommand) displayRecentLogs() error {
 }
 
 func (cmd LogsCommand) streamLogs() error {
-	messages, logErrs, warnings, err := cmd.Actor.GetStreamingLogsForApplicationByNameAndSpace(
+	messages, logErrs, warnings, err, stopStreaming := cmd.Actor.GetStreamingLogsForApplicationByNameAndSpace(
 		cmd.RequiredArgs.AppName,
 		cmd.Config.TargetedSpace().GUID,
-		cmd.NOAAClient,
+		cmd.LogCacheClient,
 	)
 
 	cmd.UI.DisplayWarnings(warnings)
@@ -137,6 +133,7 @@ func (cmd LogsCommand) streamLogs() error {
 	var messagesClosed, errLogsClosed bool
 	for {
 		select {
+		//TODO this case statement seems weird
 		case message, ok := <-messages:
 			if !ok {
 				messagesClosed = true
@@ -150,7 +147,7 @@ func (cmd LogsCommand) streamLogs() error {
 				break
 			}
 
-			cmd.NOAAClient.Close()
+			stopStreaming()
 			return logErr
 		}
 

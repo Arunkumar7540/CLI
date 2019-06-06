@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega/gexec"
 )
 
-var _ = FDescribe("Logs Command", func() {
+var _ = Describe("Logs Command", func() {
 	Describe("help", func() {
 		It("displays command usage to output", func() {
 			session := helpers.CF("logs", "--help")

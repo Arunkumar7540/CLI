@@ -655,7 +655,8 @@ var _ = Describe("Application Actions", func() {
 
 	Describe("StartApplication/RestartApplication", func() {
 		var (
-			app            Application
+			app Application
+			//TODO: remove NOAAClient
 			fakeNOAAClient *v2actionfakes.FakeNOAAClient
 
 			messages <-chan *LogMessage

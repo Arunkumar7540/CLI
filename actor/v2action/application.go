@@ -232,7 +232,7 @@ func (actor Actor) SetApplicationHealthCheckTypeByNameAndSpace(name string, spac
 // StartApplication restarts a given application. If already stopped, no stop
 // call will be sent.
 func (actor Actor) StartApplication(app Application, client NOAAClient) (<-chan *LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
-	messages, logErrs := actor.GetStreamingLogs(app.GUID, nil)
+	messages, logErrs, stopStreaming := actor.GetStreamingLogs(app.GUID, nil)
 
 	appState := make(chan ApplicationStateChange)
 	allWarnings := make(chan string)
@@ -242,6 +242,7 @@ func (actor Actor) StartApplication(app Application, client NOAAClient) (<-chan 
 		defer close(allWarnings)
 		defer close(errs)
 		defer client.Close() // automatic close to prevent stale clients
+		defer stopStreaming()
 
 		if app.PackageState != constant.ApplicationPackageStaged {
 			appState <- ApplicationStateStaging
@@ -269,7 +270,7 @@ func (actor Actor) StartApplication(app Application, client NOAAClient) (<-chan 
 // RestartApplication restarts a given application. If already stopped, no stop
 // call will be sent.
 func (actor Actor) RestartApplication(app Application, client NOAAClient) (<-chan *LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
-	messages, logErrs := actor.GetStreamingLogs(app.GUID, nil)
+	messages, logErrs, stopStreaming := actor.GetStreamingLogs(app.GUID, nil)
 
 	appState := make(chan ApplicationStateChange)
 	allWarnings := make(chan string)
@@ -279,6 +280,7 @@ func (actor Actor) RestartApplication(app Application, client NOAAClient) (<-cha
 		defer close(allWarnings)
 		defer close(errs)
 		defer client.Close() // automatic close to prevent stale clients
+		defer stopStreaming()
 
 		if app.Started() {
 			appState <- ApplicationStateStopping
@@ -321,7 +323,7 @@ func (actor Actor) RestartApplication(app Application, client NOAAClient) (<-cha
 // RestageApplication restarts a given application. If already stopped, no stop
 // call will be sent.
 func (actor Actor) RestageApplication(app Application, client NOAAClient) (<-chan *LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
-	messages, logErrs := actor.GetStreamingLogs(app.GUID, nil)
+	messages, logErrs, stopStreaming := actor.GetStreamingLogs(app.GUID, nil)
 
 	appState := make(chan ApplicationStateChange)
 	allWarnings := make(chan string)
@@ -331,6 +333,7 @@ func (actor Actor) RestageApplication(app Application, client NOAAClient) (<-cha
 		defer close(allWarnings)
 		defer close(errs)
 		defer client.Close() // automatic close to prevent stale clients
+		defer stopStreaming()
 
 		appState <- ApplicationStateStaging
 		restagedApp, warnings, err := actor.CloudControllerClient.RestageApplication(ccv2.Application{
