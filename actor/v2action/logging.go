@@ -85,7 +85,12 @@ func (actor Actor) GetStreamingLogs(appGUID string, client LogCacheClient) (<-ch
 		logcache.Visitor(func(envelopes []*loggregator_v2.Envelope) bool {
 			logMessages := convertEnvelopesToLogMessages(envelopes)
 			for _, logMessage := range logMessages {
-				outgoingLogStream <- &logMessage
+				select {
+				case <-ctx.Done():
+					return false
+				default:
+					outgoingLogStream <- &logMessage
+				}
 			}
 
 			return true
@@ -96,11 +101,13 @@ func (actor Actor) GetStreamingLogs(appGUID string, client LogCacheClient) (<-ch
 		logcache.WithWalkBackoff(logcache.NewAlwaysRetryBackoff(250*time.Millisecond)),
 	)
 
-	return outgoingLogStream, outgoingErrStream, func() {
-		cancelFunc()
+	go func() {
+		<-ctx.Done()
 		close(outgoingLogStream)
 		close(outgoingErrStream)
-	}
+	}()
+
+	return outgoingLogStream, outgoingErrStream, cancelFunc
 }
 
 func (actor Actor) GetRecentLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client LogCacheClient) ([]LogMessage, Warnings, error) {

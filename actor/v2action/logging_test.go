@@ -106,6 +106,13 @@ var _ = Describe("Logging Actions", func() {
 			})
 		})
 
+		When("cancelling log streaming", func() {
+			It("can be called multiple times", func() {
+				Expect(stopStreaming).ToNot(Panic())
+				Expect(stopStreaming).ToNot(Panic())
+			})
+		})
+
 		//TODO
 		XDescribe("unexpected error", func() {
 			BeforeEach(func() {
