@@ -192,8 +192,8 @@ var _ = Describe("push Command", func() {
 								return configStream, eventStream, warningsStream, errorStream
 							}
 
-							fakeRestartActor.RestartApplicationStub = func(app v2action.Application, client v2action.NOAAClient) (<-chan *v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
-								messages := make(chan *v2action.LogMessage)
+							fakeRestartActor.RestartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
+								messages := make(chan v2action.LogMessage)
 								logErrs := make(chan error)
 								appState := make(chan v2action.ApplicationStateChange)
 								warnings := make(chan string)

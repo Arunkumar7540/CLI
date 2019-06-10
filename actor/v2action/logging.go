@@ -16,8 +16,7 @@ const (
 	RecentLogsLines = 100
 )
 
-var flushInterval = 300 * time.Millisecond
-
+//TODO publicize fields and remove getters
 type LogMessage struct {
 	message        string
 	messageType    string
@@ -51,8 +50,8 @@ func (log LogMessage) SourceInstance() string {
 }
 
 //TODO this is only used in tests
-func NewLogMessage(message string, messageType int, timestamp time.Time, sourceType string, sourceInstance string) *LogMessage {
-	return &LogMessage{
+func NewLogMessage(message string, messageType int, timestamp time.Time, sourceType string, sourceInstance string) LogMessage {
+	return LogMessage{
 		message:        message,
 		messageType:    events.LogMessage_MessageType_name[int32(events.LogMessage_MessageType(messageType))],
 		timestamp:      timestamp,
@@ -61,50 +60,37 @@ func NewLogMessage(message string, messageType int, timestamp time.Time, sourceT
 	}
 }
 
-type LogMessages []*LogMessage
-
-func (lm LogMessages) Len() int { return len(lm) }
-
-func (lm LogMessages) Less(i, j int) bool {
-	return lm[i].timestamp.Before(lm[j].timestamp)
-}
-
-func (lm LogMessages) Swap(i, j int) {
-	lm[i], lm[j] = lm[j], lm[i]
-}
-
-func (actor Actor) GetStreamingLogs(appGUID string, client LogCacheClient) (<-chan *LogMessage, <-chan error, context.CancelFunc) {
+func (actor Actor) GetStreamingLogs(appGUID string, client LogCacheClient) (<-chan LogMessage, <-chan error, context.CancelFunc) {
 	log.Info("Start Tailing Logs")
 
-	outgoingLogStream := make(chan *LogMessage, 1000)
+	outgoingLogStream := make(chan LogMessage, 1000)
 	outgoingErrStream := make(chan error, 1000)
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	go logcache.Walk(
-		ctx,
-		appGUID,
-		logcache.Visitor(func(envelopes []*loggregator_v2.Envelope) bool {
-			logMessages := convertEnvelopesToLogMessages(envelopes)
-			for _, logMessage := range logMessages {
-				select {
-				case <-ctx.Done():
-					return false
-				default:
-					outgoingLogStream <- &logMessage
-				}
-			}
-
-			return true
-		}),
-		client.Read,
-		logcache.WithWalkStartTime(time.Unix(0, 0)), //TODO
-		//TODO logcache.WithWalkEnvelopeTypes(),
-		logcache.WithWalkBackoff(logcache.NewAlwaysRetryBackoff(250*time.Millisecond)),
-	)
-
 	go func() {
-		<-ctx.Done()
-		close(outgoingLogStream)
-		close(outgoingErrStream)
+		defer close(outgoingLogStream)
+		defer close(outgoingErrStream)
+
+		logcache.Walk(
+			ctx,
+			appGUID,
+			logcache.Visitor(func(envelopes []*loggregator_v2.Envelope) bool {
+				logMessages := convertEnvelopesToLogMessages(envelopes)
+				for _, logMessage := range logMessages {
+					select {
+					case <-ctx.Done():
+						return false
+					default:
+						outgoingLogStream <- logMessage
+					}
+				}
+
+				return true
+			}),
+			client.Read,
+			logcache.WithWalkStartTime(time.Now().Add(-5*time.Second)),
+			logcache.WithWalkEnvelopeTypes(logcache_v1.EnvelopeType_LOG),
+			logcache.WithWalkBackoff(logcache.NewAlwaysRetryBackoff(250*time.Millisecond)),
+		)
 	}()
 
 	return outgoingLogStream, outgoingErrStream, cancelFunc
@@ -130,13 +116,17 @@ func (actor Actor) GetRecentLogsForApplicationByNameAndSpace(appName string, spa
 	}
 
 	logMessages := convertEnvelopesToLogMessages(envelopes)
-	return logMessages, allWarnings, nil
+	var reorderedLogMessages []LogMessage
+	for i := len(logMessages) - 1; i >= 0; i-- {
+		reorderedLogMessages = append(reorderedLogMessages, logMessages[i])
+	}
+
+	return reorderedLogMessages, allWarnings, nil
 }
 
 func convertEnvelopesToLogMessages(envelopes []*loggregator_v2.Envelope) []LogMessage {
 	var logMessages []LogMessage
-	for i := len(envelopes) - 1; i >= 0; i-- {
-		envelope := envelopes[i]
+	for _, envelope := range envelopes {
 		logEnvelope, ok := envelope.GetMessage().(*loggregator_v2.Envelope_Log)
 		if !ok {
 			continue
@@ -147,20 +137,20 @@ func convertEnvelopesToLogMessages(envelopes []*loggregator_v2.Envelope) []LogMe
 			message:        string(log.Payload),
 			messageType:    loggregator_v2.Log_Type_name[int32(log.Type)],
 			timestamp:      time.Unix(0, envelope.GetTimestamp()),
-			sourceType:     envelope.GetTags()["source_type"], //TODO magical constant
+			sourceType:     envelope.GetTags()["source_type"],
 			sourceInstance: envelope.GetInstanceId(),
 		})
 	}
 	return logMessages
 }
 
-func (actor Actor) GetStreamingLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client LogCacheClient) (<-chan *LogMessage, <-chan error, Warnings, error, context.CancelFunc) {
+func (actor Actor) GetStreamingLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client LogCacheClient) (<-chan LogMessage, <-chan error, Warnings, error, context.CancelFunc) {
 	app, allWarnings, err := actor.GetApplicationByNameAndSpace(appName, spaceGUID)
 	if err != nil {
 		return nil, nil, allWarnings, err, func() {}
 	}
 
-	messages, logErrs, cancel := actor.GetStreamingLogs(app.GUID, nil)
+	messages, logErrs, cancel := actor.GetStreamingLogs(app.GUID, client)
 
 	return messages, logErrs, allWarnings, err, cancel
 }

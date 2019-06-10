@@ -51,7 +51,7 @@ var _ = Describe("Logging Actions", func() {
 		var (
 			expectedAppGUID string
 
-			messages      <-chan *LogMessage
+			messages      <-chan LogMessage
 			errs          <-chan error
 			stopStreaming context.CancelFunc
 		)
@@ -84,12 +84,26 @@ var _ = Describe("Logging Actions", func() {
 
 					return []*loggregator_v2.Envelope{{
 						// 2 seconds in the past to get past Walk delay
+						Timestamp:  time.Now().Add(-3 * time.Second).UnixNano(),
+						SourceId:   "some-app-guid",
+						InstanceId: "some-source-instance",
+						Message: &loggregator_v2.Envelope_Log{
+							Log: &loggregator_v2.Log{
+								Payload: []byte("message-1"),
+								Type:    loggregator_v2.Log_OUT,
+							},
+						},
+						Tags: map[string]string{
+							"source_type": "some-source-type",
+						},
+					}, {
+						// 2 seconds in the past to get past Walk delay
 						Timestamp:  time.Now().Add(-2 * time.Second).UnixNano(),
 						SourceId:   "some-app-guid",
 						InstanceId: "some-source-instance",
 						Message: &loggregator_v2.Envelope_Log{
 							Log: &loggregator_v2.Log{
-								Payload: []byte("message"),
+								Payload: []byte("message-2"),
 								Type:    loggregator_v2.Log_OUT,
 							},
 						},
@@ -101,12 +115,85 @@ var _ = Describe("Logging Actions", func() {
 			})
 
 			It("converts them to log messages, sorts them, and passes them through the messages channel", func() {
-				Eventually(messages).Should(HaveLen(2))
+				Eventually(messages).Should(HaveLen(4))
+				var message LogMessage
+				Expect(messages).To(Receive(&message))
+				Expect(message.Message()).To(Equal("message-1"))
+				Expect(messages).To(Receive(&message))
+				Expect(message.Message()).To(Equal("message-2"))
+
 				Expect(errs).ToNot(Receive())
 			})
 		})
 
+		When("logs are older than 5 seconds", func() {
+			var readStart chan time.Time
+
+			BeforeEach(func() {
+				readStart = make(chan time.Time, 100)
+				fakeConfig.DialTimeoutReturns(60 * time.Minute)
+				fakeLogCacheClient.ReadStub = func(
+					ctx context.Context,
+					sourceID string,
+					start time.Time,
+					opts ...logcache.ReadOption,
+				) ([]*loggregator_v2.Envelope, error) {
+					if fakeLogCacheClient.ReadCallCount() > 1 {
+						stopStreaming()
+					}
+
+					readStart <- start
+
+					return []*loggregator_v2.Envelope{{
+						// 2 seconds in the past to get past Walk delay
+						Timestamp:  time.Now().Add(-6 * time.Second).UnixNano(),
+						SourceId:   "some-app-guid",
+						InstanceId: "some-source-instance",
+						Message: &loggregator_v2.Envelope_Log{
+							Log: &loggregator_v2.Log{
+								Payload: []byte("message-1"),
+								Type:    loggregator_v2.Log_OUT,
+							},
+						},
+						Tags: map[string]string{
+							"source_type": "some-source-type",
+						},
+					}, {
+						// 2 seconds in the past to get past Walk delay
+						Timestamp:  time.Now().Add(-2 * time.Second).UnixNano(),
+						SourceId:   "some-app-guid",
+						InstanceId: "some-source-instance",
+						Message: &loggregator_v2.Envelope_Log{
+							Log: &loggregator_v2.Log{
+								Payload: []byte("message-2"),
+								Type:    loggregator_v2.Log_OUT,
+							},
+						},
+						Tags: map[string]string{
+							"source_type": "some-source-type",
+						},
+					}}, ctx.Err()
+				}
+			})
+
+			It("ignores them", func() {
+				Eventually(readStart).Should(Receive(BeTemporally("~", time.Now().Add(-5*time.Second), time.Second)))
+			})
+		})
+
 		When("cancelling log streaming", func() {
+			BeforeEach(func() {
+				fakeConfig.DialTimeoutReturns(60 * time.Minute)
+				fakeLogCacheClient.ReadStub = func(
+					ctx context.Context,
+					sourceID string,
+					start time.Time,
+					opts ...logcache.ReadOption,
+				) ([]*loggregator_v2.Envelope, error) {
+					return nil, ctx.Err()
+				}
+			})
+
 			It("can be called multiple times", func() {
 				Expect(stopStreaming).ToNot(Panic())
 				Expect(stopStreaming).ToNot(Panic())
@@ -274,8 +361,9 @@ var _ = Describe("Logging Actions", func() {
 			var (
 				expectedAppGUID string
 
-				messages <-chan *LogMessage
-				logErrs  <-chan error
+				messages      <-chan LogMessage
+				logErrs       <-chan error
+				stopStreaming context.CancelFunc
 			)
 
 			AfterEach(func() {
@@ -298,74 +386,62 @@ var _ = Describe("Logging Actions", func() {
 				)
 
 				fakeConfig.DialTimeoutReturns(60 * time.Minute)
+				fakeLogCacheClient.ReadStub = func(
+					ctx context.Context,
+					sourceID string,
+					start time.Time,
+					opts ...logcache.ReadOption,
+				) ([]*loggregator_v2.Envelope, error) {
+					if fakeLogCacheClient.ReadCallCount() > 2 {
+						stopStreaming()
+					}
 
-				//fakeNOAAClient.TailingLogsStub = func(appGUID string, authToken string) (<-chan *events.LogMessage, <-chan error) {
-				//	Expect(appGUID).To(Equal(expectedAppGUID))
-				//	Expect(authToken).To(Equal("AccessTokenForTest"))
-				//
-				//	Expect(fakeNOAAClient.SetOnConnectCallbackCallCount()).To(Equal(1))
-				//	onConnectOrOnRetry := fakeNOAAClient.SetOnConnectCallbackArgsForCall(0)
-				//
-				//	eventStream := make(chan *events.LogMessage)
-				//	errStream := make(chan error, 1)
-				//
-				//	go func() {
-				//		defer close(eventStream)
-				//		defer close(errStream)
-				//
-				//		onConnectOrOnRetry()
-				//
-				//		outMessage := events.LogMessage_OUT
-				//		ts1 := int64(10)
-				//		sourceType := "some-source-type"
-				//		sourceInstance := "some-source-instance"
-				//
-				//		eventStream <- &events.LogMessage{
-				//			Message:        []byte("message-1"),
-				//			MessageType:    &outMessage,
-				//			Timestamp:      &ts1,
-				//			SourceType:     &sourceType,
-				//			SourceInstance: &sourceInstance,
-				//		}
-				//
-				//		errMessage := events.LogMessage_ERR
-				//		ts2 := int64(20)
-				//
-				//		eventStream <- &events.LogMessage{
-				//			Message:        []byte("message-2"),
-				//			MessageType:    &errMessage,
-				//			Timestamp:      &ts2,
-				//			SourceType:     &sourceType,
-				//			SourceInstance: &sourceInstance,
-				//		}
-				//	}()
-				//
-				//	return eventStream, errStream
-				//}
+					return []*loggregator_v2.Envelope{{
+						// 2 seconds in the past to get past Walk delay
+						Timestamp:  time.Now().Add(-3 * time.Second).UnixNano(),
+						SourceId:   expectedAppGUID,
+						InstanceId: "some-source-instance",
+						Message: &loggregator_v2.Envelope_Log{
+							Log: &loggregator_v2.Log{
+								Payload: []byte("message-1"),
+								Type:    loggregator_v2.Log_OUT,
+							},
+						},
+						Tags: map[string]string{
+							"source_type": "some-source-type",
+						},
+					}, {
+						// 2 seconds in the past to get past Walk delay
+						Timestamp:  time.Now().Add(-2 * time.Second).UnixNano(),
+						SourceId:   expectedAppGUID,
+						InstanceId: "some-source-instance",
+						Message: &loggregator_v2.Envelope_Log{
+							Log: &loggregator_v2.Log{
+								Payload: []byte("message-2"),
+								Type:    loggregator_v2.Log_OUT,
+							},
+						},
+						Tags: map[string]string{
+							"source_type": "some-source-type",
+						},
+					}}, ctx.Err()
+				}
 			})
 
 			It("converts them to log messages and passes them through the messages channel", func() {
 				var err error
 				var warnings Warnings
-				messages, logErrs, warnings, err, _ = actor.GetStreamingLogsForApplicationByNameAndSpace("some-app", "some-space-guid", fakeLogCacheClient)
-				//TODO call cancel
+				messages, logErrs, warnings, err, stopStreaming = actor.GetStreamingLogsForApplicationByNameAndSpace("some-app", "some-space-guid", fakeLogCacheClient)
+				defer stopStreaming()
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(warnings).To(ConsistOf("some-app-warnings"))
 
-				message := <-messages
+				var message LogMessage
+				Eventually(messages).Should(Receive(&message))
 				Expect(message.Message()).To(Equal("message-1"))
-				Expect(message.Type()).To(Equal("OUT"))
-				Expect(message.Timestamp()).To(Equal(time.Unix(0, 10)))
-				Expect(message.SourceType()).To(Equal("some-source-type"))
-				Expect(message.SourceInstance()).To(Equal("some-source-instance"))
-
-				message = <-messages
+				Eventually(messages).Should(Receive(&message))
 				Expect(message.Message()).To(Equal("message-2"))
-				Expect(message.Type()).To(Equal("ERR"))
-				Expect(message.Timestamp()).To(Equal(time.Unix(0, 20)))
-				Expect(message.SourceType()).To(Equal("some-source-type"))
-				Expect(message.SourceInstance()).To(Equal("some-source-instance"))
 			})
 		})
 
@@ -383,11 +459,10 @@ var _ = Describe("Logging Actions", func() {
 
 			It("returns error and warnings", func() {
 				_, _, warnings, err, _ := actor.GetStreamingLogsForApplicationByNameAndSpace("some-app", "some-space-guid", fakeLogCacheClient)
-				//TODO call cancel
 				Expect(err).To(MatchError(expectedErr))
 				Expect(warnings).To(ConsistOf("some-app-warnings"))
 
-				//Expect(fakeNOAAClient.TailingLogsCallCount()).To(Equal(0))
+				Expect(fakeLogCacheClient.ReadCallCount()).To(Equal(0))
 			})
 		})
 	})

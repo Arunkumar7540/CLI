@@ -111,14 +111,14 @@ var _ = Describe("logs command", func() {
 				BeforeEach(func() {
 					fakeActor.GetRecentLogsForApplicationByNameAndSpaceReturns(
 						[]v2action.LogMessage{
-							*v2action.NewLogMessage(
+							v2action.NewLogMessage(
 								"i am message 1",
 								1,
 								time.Unix(0, 0),
 								"app",
 								"1",
 							),
-							*v2action.NewLogMessage(
+							v2action.NewLogMessage(
 								"i am message 2",
 								1,
 								time.Unix(1, 0),
@@ -174,8 +174,8 @@ var _ = Describe("logs command", func() {
 				BeforeEach(func() {
 					expectedErr = errors.New("some-error")
 
-					fakeActor.GetStreamingLogsForApplicationByNameAndSpaceStub = func(_ string, _ string, _ v2action.LogCacheClient) (<-chan *v2action.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc) {
-						messages := make(chan *v2action.LogMessage)
+					fakeActor.GetStreamingLogsForApplicationByNameAndSpaceStub = func(_ string, _ string, _ v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc) {
+						messages := make(chan v2action.LogMessage)
 						logErrs := make(chan error)
 
 						go func() {
@@ -197,8 +197,8 @@ var _ = Describe("logs command", func() {
 
 			When("the logs actor returns logs", func() {
 				BeforeEach(func() {
-					fakeActor.GetStreamingLogsForApplicationByNameAndSpaceStub = func(_ string, _ string, _ v2action.LogCacheClient) (<-chan *v2action.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc) {
-						messages := make(chan *v2action.LogMessage)
+					fakeActor.GetStreamingLogsForApplicationByNameAndSpaceStub = func(_ string, _ string, _ v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc) {
+						messages := make(chan v2action.LogMessage)
 						logErrs := make(chan error)
 						message1 := v2action.NewLogMessage(
 							"i am message 1",

@@ -22,7 +22,7 @@ var _ = Describe("Poll Start", func() {
 	var (
 		testUI      *ui.UI
 		fakeConfig  *commandfakes.FakeConfig
-		messages    chan *v2action.LogMessage
+		messages    chan v2action.LogMessage
 		logErrs     chan error
 		appState    chan v2action.ApplicationStateChange
 		apiWarnings chan string
@@ -36,7 +36,7 @@ var _ = Describe("Poll Start", func() {
 		fakeConfig = new(commandfakes.FakeConfig)
 		fakeConfig.BinaryNameReturns("FiveThirtyEight")
 
-		messages = make(chan *v2action.LogMessage)
+		messages = make(chan v2action.LogMessage)
 		logErrs = make(chan error)
 		appState = make(chan v2action.ApplicationStateChange)
 		apiWarnings = make(chan string)

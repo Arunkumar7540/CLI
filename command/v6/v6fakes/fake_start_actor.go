@@ -41,21 +41,21 @@ type FakeStartActor struct {
 		result2 v2action.Warnings
 		result3 error
 	}
-	StartApplicationStub        func(v2action.Application, v2action.NOAAClient) (<-chan *v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error)
+	StartApplicationStub        func(v2action.Application, v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error)
 	startApplicationMutex       sync.RWMutex
 	startApplicationArgsForCall []struct {
 		arg1 v2action.Application
-		arg2 v2action.NOAAClient
+		arg2 v2action.LogCacheClient
 	}
 	startApplicationReturns struct {
-		result1 <-chan *v2action.LogMessage
+		result1 <-chan v2action.LogMessage
 		result2 <-chan error
 		result3 <-chan v2action.ApplicationStateChange
 		result4 <-chan string
 		result5 <-chan error
 	}
 	startApplicationReturnsOnCall map[int]struct {
-		result1 <-chan *v2action.LogMessage
+		result1 <-chan v2action.LogMessage
 		result2 <-chan error
 		result3 <-chan v2action.ApplicationStateChange
 		result4 <-chan string
@@ -199,12 +199,12 @@ func (fake *FakeStartActor) GetApplicationSummaryByNameAndSpaceReturnsOnCall(i i
 	}{result1, result2, result3}
 }
 
-func (fake *FakeStartActor) StartApplication(arg1 v2action.Application, arg2 v2action.NOAAClient) (<-chan *v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
+func (fake *FakeStartActor) StartApplication(arg1 v2action.Application, arg2 v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
 	fake.startApplicationMutex.Lock()
 	ret, specificReturn := fake.startApplicationReturnsOnCall[len(fake.startApplicationArgsForCall)]
 	fake.startApplicationArgsForCall = append(fake.startApplicationArgsForCall, struct {
 		arg1 v2action.Application
-		arg2 v2action.NOAAClient
+		arg2 v2action.LogCacheClient
 	}{arg1, arg2})
 	fake.recordInvocation("StartApplication", []interface{}{arg1, arg2})
 	fake.startApplicationMutex.Unlock()
@@ -224,25 +224,25 @@ func (fake *FakeStartActor) StartApplicationCallCount() int {
 	return len(fake.startApplicationArgsForCall)
 }
 
-func (fake *FakeStartActor) StartApplicationCalls(stub func(v2action.Application, v2action.NOAAClient) (<-chan *v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error)) {
+func (fake *FakeStartActor) StartApplicationCalls(stub func(v2action.Application, v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error)) {
 	fake.startApplicationMutex.Lock()
 	defer fake.startApplicationMutex.Unlock()
 	fake.StartApplicationStub = stub
 }
 
-func (fake *FakeStartActor) StartApplicationArgsForCall(i int) (v2action.Application, v2action.NOAAClient) {
+func (fake *FakeStartActor) StartApplicationArgsForCall(i int) (v2action.Application, v2action.LogCacheClient) {
 	fake.startApplicationMutex.RLock()
 	defer fake.startApplicationMutex.RUnlock()
 	argsForCall := fake.startApplicationArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeStartActor) StartApplicationReturns(result1 <-chan *v2action.LogMessage, result2 <-chan error, result3 <-chan v2action.ApplicationStateChange, result4 <-chan string, result5 <-chan error) {
+func (fake *FakeStartActor) StartApplicationReturns(result1 <-chan v2action.LogMessage, result2 <-chan error, result3 <-chan v2action.ApplicationStateChange, result4 <-chan string, result5 <-chan error) {
 	fake.startApplicationMutex.Lock()
 	defer fake.startApplicationMutex.Unlock()
 	fake.StartApplicationStub = nil
 	fake.startApplicationReturns = struct {
-		result1 <-chan *v2action.LogMessage
+		result1 <-chan v2action.LogMessage
 		result2 <-chan error
 		result3 <-chan v2action.ApplicationStateChange
 		result4 <-chan string
@@ -250,13 +250,13 @@ func (fake *FakeStartActor) StartApplicationReturns(result1 <-chan *v2action.Log
 	}{result1, result2, result3, result4, result5}
 }
 
-func (fake *FakeStartActor) StartApplicationReturnsOnCall(i int, result1 <-chan *v2action.LogMessage, result2 <-chan error, result3 <-chan v2action.ApplicationStateChange, result4 <-chan string, result5 <-chan error) {
+func (fake *FakeStartActor) StartApplicationReturnsOnCall(i int, result1 <-chan v2action.LogMessage, result2 <-chan error, result3 <-chan v2action.ApplicationStateChange, result4 <-chan string, result5 <-chan error) {
 	fake.startApplicationMutex.Lock()
 	defer fake.startApplicationMutex.Unlock()
 	fake.StartApplicationStub = nil
 	if fake.startApplicationReturnsOnCall == nil {
 		fake.startApplicationReturnsOnCall = make(map[int]struct {
-			result1 <-chan *v2action.LogMessage
+			result1 <-chan v2action.LogMessage
 			result2 <-chan error
 			result3 <-chan v2action.ApplicationStateChange
 			result4 <-chan string
@@ -264,7 +264,7 @@ func (fake *FakeStartActor) StartApplicationReturnsOnCall(i int, result1 <-chan 
 		})
 	}
 	fake.startApplicationReturnsOnCall[i] = struct {
-		result1 <-chan *v2action.LogMessage
+		result1 <-chan v2action.LogMessage
 		result2 <-chan error
 		result3 <-chan v2action.ApplicationStateChange
 		result4 <-chan string

@@ -41,21 +41,21 @@ type FakeRestartActor struct {
 		result2 v2action.Warnings
 		result3 error
 	}
-	RestartApplicationStub        func(v2action.Application, v2action.NOAAClient) (<-chan *v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error)
+	RestartApplicationStub        func(v2action.Application, v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error)
 	restartApplicationMutex       sync.RWMutex
 	restartApplicationArgsForCall []struct {
 		arg1 v2action.Application
-		arg2 v2action.NOAAClient
+		arg2 v2action.LogCacheClient
 	}
 	restartApplicationReturns struct {
-		result1 <-chan *v2action.LogMessage
+		result1 <-chan v2action.LogMessage
 		result2 <-chan error
 		result3 <-chan v2action.ApplicationStateChange
 		result4 <-chan string
 		result5 <-chan error
 	}
 	restartApplicationReturnsOnCall map[int]struct {
-		result1 <-chan *v2action.LogMessage
+		result1 <-chan v2action.LogMessage
 		result2 <-chan error
 		result3 <-chan v2action.ApplicationStateChange
 		result4 <-chan string
@@ -199,12 +199,12 @@ func (fake *FakeRestartActor) GetApplicationSummaryByNameAndSpaceReturnsOnCall(i
 	}{result1, result2, result3}
 }
 
-func (fake *FakeRestartActor) RestartApplication(arg1 v2action.Application, arg2 v2action.NOAAClient) (<-chan *v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
+func (fake *FakeRestartActor) RestartApplication(arg1 v2action.Application, arg2 v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
 	fake.restartApplicationMutex.Lock()
 	ret, specificReturn := fake.restartApplicationReturnsOnCall[len(fake.restartApplicationArgsForCall)]
 	fake.restartApplicationArgsForCall = append(fake.restartApplicationArgsForCall, struct {
 		arg1 v2action.Application
-		arg2 v2action.NOAAClient
+		arg2 v2action.LogCacheClient
 	}{arg1, arg2})
 	fake.recordInvocation("RestartApplication", []interface{}{arg1, arg2})
 	fake.restartApplicationMutex.Unlock()
@@ -224,25 +224,25 @@ func (fake *FakeRestartActor) RestartApplicationCallCount() int {
 	return len(fake.restartApplicationArgsForCall)
 }
 
-func (fake *FakeRestartActor) RestartApplicationCalls(stub func(v2action.Application, v2action.NOAAClient) (<-chan *v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error)) {
+func (fake *FakeRestartActor) RestartApplicationCalls(stub func(v2action.Application, v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error)) {
 	fake.restartApplicationMutex.Lock()
 	defer fake.restartApplicationMutex.Unlock()
 	fake.RestartApplicationStub = stub
 }
 
-func (fake *FakeRestartActor) RestartApplicationArgsForCall(i int) (v2action.Application, v2action.NOAAClient) {
+func (fake *FakeRestartActor) RestartApplicationArgsForCall(i int) (v2action.Application, v2action.LogCacheClient) {
 	fake.restartApplicationMutex.RLock()
 	defer fake.restartApplicationMutex.RUnlock()
 	argsForCall := fake.restartApplicationArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeRestartActor) RestartApplicationReturns(result1 <-chan *v2action.LogMessage, result2 <-chan error, result3 <-chan v2action.ApplicationStateChange, result4 <-chan string, result5 <-chan error) {
+func (fake *FakeRestartActor) RestartApplicationReturns(result1 <-chan v2action.LogMessage, result2 <-chan error, result3 <-chan v2action.ApplicationStateChange, result4 <-chan string, result5 <-chan error) {
 	fake.restartApplicationMutex.Lock()
 	defer fake.restartApplicationMutex.Unlock()
 	fake.RestartApplicationStub = nil
 	fake.restartApplicationReturns = struct {
-		result1 <-chan *v2action.LogMessage
+		result1 <-chan v2action.LogMessage
 		result2 <-chan error
 		result3 <-chan v2action.ApplicationStateChange
 		result4 <-chan string
@@ -250,13 +250,13 @@ func (fake *FakeRestartActor) RestartApplicationReturns(result1 <-chan *v2action
 	}{result1, result2, result3, result4, result5}
 }
 
-func (fake *FakeRestartActor) RestartApplicationReturnsOnCall(i int, result1 <-chan *v2action.LogMessage, result2 <-chan error, result3 <-chan v2action.ApplicationStateChange, result4 <-chan string, result5 <-chan error) {
+func (fake *FakeRestartActor) RestartApplicationReturnsOnCall(i int, result1 <-chan v2action.LogMessage, result2 <-chan error, result3 <-chan v2action.ApplicationStateChange, result4 <-chan string, result5 <-chan error) {
 	fake.restartApplicationMutex.Lock()
 	defer fake.restartApplicationMutex.Unlock()
 	fake.RestartApplicationStub = nil
 	if fake.restartApplicationReturnsOnCall == nil {
 		fake.restartApplicationReturnsOnCall = make(map[int]struct {
-			result1 <-chan *v2action.LogMessage
+			result1 <-chan v2action.LogMessage
 			result2 <-chan error
 			result3 <-chan v2action.ApplicationStateChange
 			result4 <-chan string
@@ -264,7 +264,7 @@ func (fake *FakeRestartActor) RestartApplicationReturnsOnCall(i int, result1 <-c
 		})
 	}
 	fake.restartApplicationReturnsOnCall[i] = struct {
-		result1 <-chan *v2action.LogMessage
+		result1 <-chan v2action.LogMessage
 		result2 <-chan error
 		result3 <-chan v2action.ApplicationStateChange
 		result4 <-chan string

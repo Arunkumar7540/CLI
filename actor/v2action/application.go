@@ -233,7 +233,7 @@ func (actor Actor) SetApplicationHealthCheckTypeByNameAndSpace(name string, spac
 // StartApplication restarts a given application. If already stopped, no stop
 // call will be sent.
 
-func (actor Actor) StartApplication(app Application, client LogCacheClient) (<-chan *LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
+func (actor Actor) StartApplication(app Application, client LogCacheClient) (<-chan LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
 	messages, logErrs, stopStreaming := actor.GetStreamingLogs(app.GUID, client)
 
 	appState := make(chan ApplicationStateChange)
@@ -270,8 +270,8 @@ func (actor Actor) StartApplication(app Application, client LogCacheClient) (<-c
 
 // RestartApplication restarts a given application. If already stopped, no stop
 // call will be sent.
-func (actor Actor) RestartApplication(app Application, client LogCacheClient) (<-chan *LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
-	messages, logErrs, stopStreaming := actor.GetStreamingLogs(app.GUID, nil)
+func (actor Actor) RestartApplication(app Application, client LogCacheClient) (<-chan LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
+	messages, logErrs, stopStreaming := actor.GetStreamingLogs(app.GUID, client)
 
 	appState := make(chan ApplicationStateChange)
 	allWarnings := make(chan string)
@@ -322,8 +322,8 @@ func (actor Actor) RestartApplication(app Application, client LogCacheClient) (<
 
 // RestageApplication restarts a given application. If already stopped, no stop
 // call will be sent.
-func (actor Actor) RestageApplication(app Application, client LogCacheClient) (<-chan *LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
-	messages, logErrs, stopStreaming := actor.GetStreamingLogs(app.GUID, nil)
+func (actor Actor) RestageApplication(app Application, client LogCacheClient) (<-chan LogMessage, <-chan error, <-chan ApplicationStateChange, <-chan string, <-chan error) {
+	messages, logErrs, stopStreaming := actor.GetStreamingLogs(app.GUID, client)
 
 	appState := make(chan ApplicationStateChange)
 	allWarnings := make(chan string)
