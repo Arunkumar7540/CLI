@@ -1,6 +1,7 @@
 package v6
 
 import (
+	"code.cloudfoundry.org/cli/actor/loggingaction"
 	"context"
 
 	"code.cloudfoundry.org/cli/actor/sharedaction"
@@ -14,8 +15,8 @@ import (
 //go:generate counterfeiter . LogsActor
 
 type LogsActor interface {
-	GetRecentLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client v2action.LogCacheClient) ([]v2action.LogMessage, v2action.Warnings, error)
-	GetStreamingLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc)
+	GetRecentLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client loggingaction.LogCacheClient) ([]loggingaction.LogMessage, v2action.Warnings, error)
+	GetStreamingLogsForApplicationByNameAndSpace(appName string, spaceGUID string, client loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc)
 }
 
 type LogsCommand struct {

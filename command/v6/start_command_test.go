@@ -1,6 +1,7 @@
 package v6_test
 
 import (
+	"code.cloudfoundry.org/cli/actor/loggingaction"
 	"errors"
 	"time"
 
@@ -60,8 +61,8 @@ var _ = Describe("Start Command", func() {
 		testUI.TimezoneLocation, err = time.LoadLocation("America/Los_Angeles")
 		Expect(err).NotTo(HaveOccurred())
 
-		fakeActor.StartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
-			messages := make(chan v2action.LogMessage)
+		fakeActor.StartApplicationStub = func(app v2action.Application, client loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
+			messages := make(chan loggingaction.LogMessage)
 			logErrs := make(chan error)
 			appState := make(chan v2action.ApplicationStateChange)
 			warnings := make(chan string)
@@ -174,16 +175,16 @@ var _ = Describe("Start Command", func() {
 
 				When("passed an ApplicationStateStarting message", func() {
 					BeforeEach(func() {
-						fakeActor.StartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
-							messages := make(chan v2action.LogMessage)
+						fakeActor.StartApplicationStub = func(app v2action.Application, client loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
+							messages := make(chan loggingaction.LogMessage)
 							logErrs := make(chan error)
 							appState := make(chan v2action.ApplicationStateChange)
 							warnings := make(chan string)
 							errs := make(chan error)
 
 							go func() {
-								messages <- v2action.NewLogMessage("log message 1", 1, time.Unix(0, 0), "STG", "1")
-								messages <- v2action.NewLogMessage("log message 2", 1, time.Unix(0, 0), "STG", "1")
+								messages <- loggingaction.NewLogMessage("log message 1", 1, time.Unix(0, 0), "STG", "1")
+								messages <- loggingaction.NewLogMessage("log message 2", 1, time.Unix(0, 0), "STG", "1")
 								appState <- v2action.ApplicationStateStarting
 								close(messages)
 								close(logErrs)
@@ -206,17 +207,17 @@ var _ = Describe("Start Command", func() {
 
 				When("passed a log message", func() {
 					BeforeEach(func() {
-						fakeActor.StartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
-							messages := make(chan v2action.LogMessage)
+						fakeActor.StartApplicationStub = func(app v2action.Application, client loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
+							messages := make(chan loggingaction.LogMessage)
 							logErrs := make(chan error)
 							appState := make(chan v2action.ApplicationStateChange)
 							warnings := make(chan string)
 							errs := make(chan error)
 
 							go func() {
-								messages <- v2action.NewLogMessage("log message 1", 1, time.Unix(0, 0), "STG", "1")
-								messages <- v2action.NewLogMessage("log message 2", 1, time.Unix(0, 0), "STG", "1")
-								messages <- v2action.NewLogMessage("log message 3", 1, time.Unix(0, 0), "Something else", "1")
+								messages <- loggingaction.NewLogMessage("log message 1", 1, time.Unix(0, 0), "STG", "1")
+								messages <- loggingaction.NewLogMessage("log message 2", 1, time.Unix(0, 0), "STG", "1")
+								messages <- loggingaction.NewLogMessage("log message 3", 1, time.Unix(0, 0), "Something else", "1")
 								close(messages)
 								close(logErrs)
 								close(appState)
@@ -242,8 +243,8 @@ var _ = Describe("Start Command", func() {
 
 						BeforeEach(func() {
 							expectedErr = errors.New("err log message")
-							fakeActor.StartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
-								messages := make(chan v2action.LogMessage)
+							fakeActor.StartApplicationStub = func(app v2action.Application, client loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
+								messages := make(chan loggingaction.LogMessage)
 								logErrs := make(chan error)
 								appState := make(chan v2action.ApplicationStateChange)
 								warnings := make(chan string)
@@ -272,8 +273,8 @@ var _ = Describe("Start Command", func() {
 				When("passed a warning", func() {
 					Context("while logs are still being received", func() {
 						BeforeEach(func() {
-							fakeActor.StartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
-								messages := make(chan v2action.LogMessage)
+							fakeActor.StartApplicationStub = func(app v2action.Application, client loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
+								messages := make(chan loggingaction.LogMessage)
 								logErrs := make(chan error)
 								appState := make(chan v2action.ApplicationStateChange)
 								warnings := make(chan string)
@@ -302,8 +303,8 @@ var _ = Describe("Start Command", func() {
 
 					Context("while logs are no longer being received", func() {
 						BeforeEach(func() {
-							fakeActor.StartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
-								messages := make(chan v2action.LogMessage)
+							fakeActor.StartApplicationStub = func(app v2action.Application, client loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
+								messages := make(chan loggingaction.LogMessage)
 								logErrs := make(chan error)
 								appState := make(chan v2action.ApplicationStateChange)
 								warnings := make(chan string)
@@ -339,8 +340,8 @@ var _ = Describe("Start Command", func() {
 					var apiErr error
 
 					BeforeEach(func() {
-						fakeActor.StartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
-							messages := make(chan v2action.LogMessage)
+						fakeActor.StartApplicationStub = func(app v2action.Application, client loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
+							messages := make(chan loggingaction.LogMessage)
 							logErrs := make(chan error)
 							appState := make(chan v2action.ApplicationStateChange)
 							warnings := make(chan string)

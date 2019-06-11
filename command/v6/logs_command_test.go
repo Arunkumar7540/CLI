@@ -1,6 +1,7 @@
 package v6_test
 
 import (
+	"code.cloudfoundry.org/cli/actor/loggingaction"
 	"context"
 	"errors"
 	"time"
@@ -110,15 +111,15 @@ var _ = Describe("logs command", func() {
 			When("the logs actor returns logs", func() {
 				BeforeEach(func() {
 					fakeActor.GetRecentLogsForApplicationByNameAndSpaceReturns(
-						[]v2action.LogMessage{
-							v2action.NewLogMessage(
+						[]loggingaction.LogMessage{
+							loggingaction.NewLogMessage(
 								"i am message 1",
 								1,
 								time.Unix(0, 0),
 								"app",
 								"1",
 							),
-							v2action.NewLogMessage(
+							loggingaction.NewLogMessage(
 								"i am message 2",
 								1,
 								time.Unix(1, 0),
@@ -174,8 +175,8 @@ var _ = Describe("logs command", func() {
 				BeforeEach(func() {
 					expectedErr = errors.New("some-error")
 
-					fakeActor.GetStreamingLogsForApplicationByNameAndSpaceStub = func(_ string, _ string, _ v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc) {
-						messages := make(chan v2action.LogMessage)
+					fakeActor.GetStreamingLogsForApplicationByNameAndSpaceStub = func(_ string, _ string, _ loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc) {
+						messages := make(chan loggingaction.LogMessage)
 						logErrs := make(chan error)
 
 						go func() {
@@ -197,17 +198,17 @@ var _ = Describe("logs command", func() {
 
 			When("the logs actor returns logs", func() {
 				BeforeEach(func() {
-					fakeActor.GetStreamingLogsForApplicationByNameAndSpaceStub = func(_ string, _ string, _ v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc) {
-						messages := make(chan v2action.LogMessage)
+					fakeActor.GetStreamingLogsForApplicationByNameAndSpaceStub = func(_ string, _ string, _ loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc) {
+						messages := make(chan loggingaction.LogMessage)
 						logErrs := make(chan error)
-						message1 := v2action.NewLogMessage(
+						message1 := loggingaction.NewLogMessage(
 							"i am message 1",
 							1,
 							time.Unix(0, 0),
 							"app",
 							"1",
 						)
-						message2 := v2action.NewLogMessage(
+						message2 := loggingaction.NewLogMessage(
 							"i am message 2",
 							1,
 							time.Unix(1, 0),

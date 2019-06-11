@@ -2,12 +2,13 @@ package shared
 
 import (
 	"code.cloudfoundry.org/cli/actor/actionerror"
+	"code.cloudfoundry.org/cli/actor/loggingaction"
 	"code.cloudfoundry.org/cli/actor/v2action"
 	"code.cloudfoundry.org/cli/command"
 	"code.cloudfoundry.org/cli/command/translatableerror"
 )
 
-func PollStart(ui command.UI, config command.Config, messages <-chan v2action.LogMessage, logErrs <-chan error, appState <-chan v2action.ApplicationStateChange, apiWarnings <-chan string, apiErrs <-chan error) error {
+func PollStart(ui command.UI, config command.Config, messages <-chan loggingaction.LogMessage, logErrs <-chan error, appState <-chan v2action.ApplicationStateChange, apiWarnings <-chan string, apiErrs <-chan error) error {
 	var breakAppState, breakWarnings, breakAPIErrs bool
 	for {
 		select {

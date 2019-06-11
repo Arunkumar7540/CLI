@@ -1,6 +1,8 @@
 package v2action_test
 
 import (
+	"code.cloudfoundry.org/cli/actor/loggingaction"
+	"code.cloudfoundry.org/cli/actor/loggingaction/loggingactionfakes"
 	"context"
 	"errors"
 	"time"
@@ -659,9 +661,9 @@ var _ = Describe("Application Actions", func() {
 	Describe("StartApplication/RestartApplication", func() {
 		var (
 			app                Application
-			fakeLogCacheClient *v2actionfakes.FakeLogCacheClient
+			fakeLogCacheClient *loggingactionfakes.FakeLogCacheClient
 
-			messages <-chan LogMessage
+			messages <-chan loggingaction.LogMessage
 			logErrs  <-chan error
 			appState <-chan ApplicationStateChange
 			warnings <-chan string
@@ -678,7 +680,7 @@ var _ = Describe("Application Actions", func() {
 				Instances: types.NullInt{Value: 2, IsSet: true},
 			}
 
-			fakeLogCacheClient = new(v2actionfakes.FakeLogCacheClient)
+			fakeLogCacheClient = new(loggingactionfakes.FakeLogCacheClient)
 
 			fakeLogCacheClient.ReadStub = func(
 				ctx context.Context,

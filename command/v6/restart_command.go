@@ -1,6 +1,7 @@
 package v6
 
 import (
+	"code.cloudfoundry.org/cli/actor/loggingaction"
 	"code.cloudfoundry.org/cli/actor/sharedaction"
 	"code.cloudfoundry.org/cli/actor/v2action"
 	"code.cloudfoundry.org/cli/actor/v2v3action"
@@ -18,7 +19,7 @@ import (
 type RestartActor interface {
 	GetApplicationByNameAndSpace(name string, spaceGUID string) (v2action.Application, v2action.Warnings, error)
 	GetApplicationSummaryByNameAndSpace(name string, spaceGUID string) (v2action.ApplicationSummary, v2action.Warnings, error)
-	RestartApplication(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error)
+	RestartApplication(app v2action.Application, client loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error)
 }
 
 type RestartCommand struct {
