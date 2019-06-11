@@ -236,74 +236,8 @@ var _ = Describe("Start Command", func() {
 					})
 				})
 
-				When("passed an log err", func() {
-					Context("NOAA connection times out/closes", func() {
-						BeforeEach(func() {
-							fakeActor.StartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
-								messages := make(chan v2action.LogMessage)
-								logErrs := make(chan error)
-								appState := make(chan v2action.ApplicationStateChange)
-								warnings := make(chan string)
-								errs := make(chan error)
-
-								go func() {
-									messages <- v2action.NewLogMessage("log message 1", 1, time.Unix(0, 0), "STG", "1")
-									messages <- v2action.NewLogMessage("log message 2", 1, time.Unix(0, 0), "STG", "1")
-									messages <- v2action.NewLogMessage("log message 3", 1, time.Unix(0, 0), "STG", "1")
-									logErrs <- actionerror.NOAATimeoutError{}
-									close(messages)
-									close(logErrs)
-									close(appState)
-									close(warnings)
-									close(errs)
-								}()
-
-								return messages, logErrs, appState, warnings, errs
-							}
-							v3ApplicationSummary := v3action.ApplicationSummary{
-								Application: v3action.Application{
-									Name: appName,
-								},
-								ProcessSummaries: v3action.ProcessSummaries{
-									{
-										Process: v3action.Process{
-											Type:       "aba",
-											Command:    *types.NewFilteredString("some-command-1"),
-											MemoryInMB: types.NullUint64{Value: 32, IsSet: true},
-											DiskInMB:   types.NullUint64{Value: 1024, IsSet: true},
-										},
-									},
-									{
-										Process: v3action.Process{
-											Type:       "console",
-											Command:    *types.NewFilteredString("some-command-2"),
-											MemoryInMB: types.NullUint64{Value: 16, IsSet: true},
-											DiskInMB:   types.NullUint64{Value: 512, IsSet: true},
-										},
-									},
-								},
-							}
-
-							applicationSummary := v2v3action.ApplicationSummary{
-								ApplicationSummary: v3ApplicationSummary,
-							}
-
-							warnings := []string{"app-summary-warning"}
-
-							fakeApplicationSummaryActor.GetApplicationSummaryByNameAndSpaceReturns(applicationSummary, warnings, nil)
-						})
-
-						It("displays a warning and continues until app has started", func() {
-							Expect(executeErr).To(BeNil())
-							Expect(testUI.Out).To(Say("message 1"))
-							Expect(testUI.Out).To(Say("message 2"))
-							Expect(testUI.Out).To(Say("message 3"))
-							Expect(testUI.Err).To(Say("timeout connecting to log server, no log will be shown"))
-							Expect(testUI.Out).To(Say(`name:\s+%s`, appName))
-						})
-					})
-
-					Context("an unexpected error occurs", func() {
+				When("passed a log err", func() {
+					Context("an error occurs", func() {
 						var expectedErr error
 
 						BeforeEach(func() {
@@ -336,7 +270,7 @@ var _ = Describe("Start Command", func() {
 				})
 
 				When("passed a warning", func() {
-					Context("while NOAA is still logging", func() {
+					Context("while logs are still being received", func() {
 						BeforeEach(func() {
 							fakeActor.StartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
 								messages := make(chan v2action.LogMessage)
@@ -366,7 +300,7 @@ var _ = Describe("Start Command", func() {
 						})
 					})
 
-					Context("while NOAA is no longer logging", func() {
+					Context("while logs are no longer being received", func() {
 						BeforeEach(func() {
 							fakeActor.StartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
 								messages := make(chan v2action.LogMessage)
@@ -378,7 +312,6 @@ var _ = Describe("Start Command", func() {
 								go func() {
 									warnings <- "warning 1"
 									warnings <- "warning 2"
-									logErrs <- actionerror.NOAATimeoutError{}
 									close(messages)
 									close(logErrs)
 									warnings <- "warning 3"
@@ -396,7 +329,6 @@ var _ = Describe("Start Command", func() {
 							Expect(executeErr).ToNot(HaveOccurred())
 							Expect(testUI.Err).To(Say("warning 1"))
 							Expect(testUI.Err).To(Say("warning 2"))
-							Expect(testUI.Err).To(Say("timeout connecting to log server, no log will be shown"))
 							Expect(testUI.Err).To(Say("warning 3"))
 							Expect(testUI.Err).To(Say("warning 4"))
 						})

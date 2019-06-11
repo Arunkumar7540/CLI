@@ -1,14 +1,17 @@
 package v2action
 
 import (
+	"code.cloudfoundry.org/cli/cf/errors"
 	"context"
+	"log"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 	"code.cloudfoundry.org/log-cache/pkg/rpc/logcache_v1"
 	"github.com/cloudfoundry/sonde-go/events"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -25,28 +28,28 @@ type LogMessage struct {
 	sourceInstance string
 }
 
-func (log LogMessage) Message() string {
-	return log.message
+func (l LogMessage) Message() string {
+	return l.message
 }
 
-func (log LogMessage) Type() string {
-	return log.messageType
+func (l LogMessage) Type() string {
+	return l.messageType
 }
 
-func (log LogMessage) Staging() bool {
-	return log.sourceType == StagingLog
+func (l LogMessage) Staging() bool {
+	return l.sourceType == StagingLog
 }
 
-func (log LogMessage) Timestamp() time.Time {
-	return log.timestamp
+func (l LogMessage) Timestamp() time.Time {
+	return l.timestamp
 }
 
-func (log LogMessage) SourceType() string {
-	return log.sourceType
+func (l LogMessage) SourceType() string {
+	return l.sourceType
 }
 
-func (log LogMessage) SourceInstance() string {
-	return log.sourceInstance
+func (l LogMessage) SourceInstance() string {
+	return l.sourceInstance
 }
 
 //TODO this is only used in tests
@@ -60,8 +63,18 @@ func NewLogMessage(message string, messageType int, timestamp time.Time, sourceT
 	}
 }
 
+type channelWriter struct {
+	errChannel chan error
+}
+
+func (c channelWriter) Write(bytes []byte) (n int, err error) {
+	c.errChannel <- errors.New(strings.Trim(string(bytes), "\n"))
+
+	return len(bytes), nil
+}
+
 func (actor Actor) GetStreamingLogs(appGUID string, client LogCacheClient) (<-chan LogMessage, <-chan error, context.CancelFunc) {
-	log.Info("Start Tailing Logs")
+	logrus.Info("Start Tailing Logs")
 
 	outgoingLogStream := make(chan LogMessage, 1000)
 	outgoingErrStream := make(chan error, 1000)
@@ -90,6 +103,9 @@ func (actor Actor) GetStreamingLogs(appGUID string, client LogCacheClient) (<-ch
 			logcache.WithWalkStartTime(time.Now().Add(-5*time.Second)),
 			logcache.WithWalkEnvelopeTypes(logcache_v1.EnvelopeType_LOG),
 			logcache.WithWalkBackoff(logcache.NewAlwaysRetryBackoff(250*time.Millisecond)),
+			logcache.WithWalkLogger(log.New(channelWriter{
+				errChannel: outgoingErrStream,
+			}, "", 0)),
 		)
 	}()
 

@@ -240,42 +240,8 @@ var _ = Describe("Restart Command", func() {
 					})
 				})
 
-				When("passed an log err", func() {
-					Context("NOAA connection times out/closes", func() {
-						BeforeEach(func() {
-							fakeActor.RestartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
-								messages := make(chan v2action.LogMessage)
-								logErrs := make(chan error)
-								appState := make(chan v2action.ApplicationStateChange)
-								warnings := make(chan string)
-								errs := make(chan error)
-
-								go func() {
-									messages <- v2action.NewLogMessage("log message 1", 1, time.Unix(0, 0), "STG", "1")
-									messages <- v2action.NewLogMessage("log message 2", 1, time.Unix(0, 0), "STG", "1")
-									messages <- v2action.NewLogMessage("log message 3", 1, time.Unix(0, 0), "STG", "1")
-									logErrs <- actionerror.NOAATimeoutError{}
-									close(messages)
-									close(logErrs)
-									close(appState)
-									close(warnings)
-									close(errs)
-								}()
-
-								return messages, logErrs, appState, warnings, errs
-							}
-						})
-
-						It("displays a warning and continues until app has started", func() {
-							Expect(executeErr).To(BeNil())
-							Expect(testUI.Out).To(Say("message 1"))
-							Expect(testUI.Out).To(Say("message 2"))
-							Expect(testUI.Out).To(Say("message 3"))
-							Expect(testUI.Err).To(Say("timeout connecting to log server, no log will be shown"))
-						})
-					})
-
-					Context("an unexpected error occurs", func() {
+				When("passed a log err", func() {
+					Context("an error occurs", func() {
 						var expectedErr error
 
 						BeforeEach(func() {
@@ -308,7 +274,7 @@ var _ = Describe("Restart Command", func() {
 				})
 
 				When("passed a warning", func() {
-					Context("while NOAA is still logging", func() {
+					Context("while logs are still being received", func() {
 						BeforeEach(func() {
 							fakeActor.RestartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
 								messages := make(chan v2action.LogMessage)
@@ -338,7 +304,7 @@ var _ = Describe("Restart Command", func() {
 						})
 					})
 
-					Context("while NOAA is no longer logging", func() {
+					Context("while no logs are being received", func() {
 						BeforeEach(func() {
 							fakeActor.RestartApplicationStub = func(app v2action.Application, client v2action.LogCacheClient) (<-chan v2action.LogMessage, <-chan error, <-chan v2action.ApplicationStateChange, <-chan string, <-chan error) {
 								messages := make(chan v2action.LogMessage)
@@ -350,7 +316,6 @@ var _ = Describe("Restart Command", func() {
 								go func() {
 									warnings <- "warning 1"
 									warnings <- "warning 2"
-									logErrs <- actionerror.NOAATimeoutError{}
 									close(messages)
 									close(logErrs)
 									warnings <- "warning 3"
@@ -368,7 +333,6 @@ var _ = Describe("Restart Command", func() {
 							Expect(executeErr).ToNot(HaveOccurred())
 							Expect(testUI.Err).To(Say("warning 1"))
 							Expect(testUI.Err).To(Say("warning 2"))
-							Expect(testUI.Err).To(Say("timeout connecting to log server, no log will be shown"))
 							Expect(testUI.Err).To(Say("warning 3"))
 							Expect(testUI.Err).To(Say("warning 4"))
 						})

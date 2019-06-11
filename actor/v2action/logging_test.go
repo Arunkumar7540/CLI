@@ -200,8 +200,7 @@ var _ = Describe("Logging Actions", func() {
 			})
 		})
 
-		//TODO
-		XDescribe("unexpected error", func() {
+		Describe("log cache error", func() {
 			BeforeEach(func() {
 				fakeLogCacheClient.ReadStub = func(
 					ctx context.Context,
@@ -218,8 +217,9 @@ var _ = Describe("Logging Actions", func() {
 			})
 
 			It("passes them through the errors channel", func() {
-				Eventually(errs).Should(Receive(Equal("error number 1")))
-				Eventually(errs).Should(Receive(Equal("error number 2")))
+				Eventually(errs).Should(HaveLen(2))
+				Eventually(errs).Should(Receive(MatchError("error number 1")))
+				Eventually(errs).Should(Receive(MatchError("error number 2")))
 			})
 		})
 	})

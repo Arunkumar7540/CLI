@@ -58,7 +58,6 @@ var _ = Describe("Poll Start", func() {
 			appState <- v2action.ApplicationStateStopping
 			appState <- v2action.ApplicationStateStaging
 			appState <- v2action.ApplicationStateStarting
-			logErrs <- actionerror.NOAATimeoutError{}
 			apiWarnings <- "some warning"
 			logErrs <- errors.New("some logErrhea")
 			messages <- v2action.NewLogMessage(
@@ -81,7 +80,6 @@ var _ = Describe("Poll Start", func() {
 			Eventually(testUI.Out).Should(Say("\nStopping app..."))
 			Eventually(testUI.Out).Should(Say("\nStaging app and tracing logs..."))
 			Eventually(testUI.Out).Should(Say("\nWaiting for app to start..."))
-			Eventually(testUI.Err).Should(Say("timeout connecting to log server, no log will be shown"))
 			Eventually(testUI.Err).Should(Say("some warning"))
 			Eventually(testUI.Err).Should(Say("some logErrhea"))
 			Eventually(testUI.Out).Should(Say("some log message"))

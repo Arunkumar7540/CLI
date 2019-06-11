@@ -49,13 +49,7 @@ func PollStart(ui command.UI, config command.Config, messages <-chan v2action.Lo
 			if !ok {
 				break
 			}
-
-			switch logErr.(type) {
-			case actionerror.NOAATimeoutError:
-				ui.DisplayWarning("timeout connecting to log server, no log will be shown")
-			default:
-				ui.DisplayWarning(logErr.Error())
-			}
+			ui.DisplayWarning(logErr.Error())
 		case apiErr, ok := <-apiErrs:
 			if !ok {
 				breakAPIErrs = true
