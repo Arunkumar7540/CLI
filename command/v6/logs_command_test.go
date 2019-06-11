@@ -112,20 +112,20 @@ var _ = Describe("logs command", func() {
 				BeforeEach(func() {
 					fakeActor.GetRecentLogsForApplicationByNameAndSpaceReturns(
 						[]loggingaction.LogMessage{
-							loggingaction.NewLogMessage(
-								"i am message 1",
-								1,
-								time.Unix(0, 0),
-								"app",
-								"1",
-							),
-							loggingaction.NewLogMessage(
-								"i am message 2",
-								1,
-								time.Unix(1, 0),
-								"another-app",
-								"2",
-							),
+							{
+								Message:        "i am message 1",
+								MessageType:    "OUT",
+								Timestamp:      time.Unix(0, 0),
+								SourceType:     "app",
+								SourceInstance: "1",
+							},
+							{
+								Message:        "i am message 2",
+								MessageType:    "OUT",
+								Timestamp:      time.Unix(1, 0),
+								SourceType:     "another-app",
+								SourceInstance: "2",
+							},
 						},
 						v2action.Warnings{"some-warning-1", "some-warning-2"},
 						nil)
@@ -201,20 +201,20 @@ var _ = Describe("logs command", func() {
 					fakeActor.GetStreamingLogsForApplicationByNameAndSpaceStub = func(_ string, _ string, _ loggingaction.LogCacheClient) (<-chan loggingaction.LogMessage, <-chan error, v2action.Warnings, error, context.CancelFunc) {
 						messages := make(chan loggingaction.LogMessage)
 						logErrs := make(chan error)
-						message1 := loggingaction.NewLogMessage(
-							"i am message 1",
-							1,
-							time.Unix(0, 0),
-							"app",
-							"1",
-						)
-						message2 := loggingaction.NewLogMessage(
-							"i am message 2",
-							1,
-							time.Unix(1, 0),
-							"another-app",
-							"2",
-						)
+						message1 := loggingaction.LogMessage{
+							Message:        "i am message 1",
+							MessageType:    "OUT",
+							Timestamp:      time.Unix(0, 0),
+							SourceType:     "app",
+							SourceInstance: "1",
+						}
+						message2 := loggingaction.LogMessage{
+							Message:        "i am message 2",
+							MessageType:    "OUT",
+							Timestamp:      time.Unix(1, 0),
+							SourceType:     "another-app",
+							SourceInstance: "2",
+						}
 
 						go func() {
 							messages <- message1

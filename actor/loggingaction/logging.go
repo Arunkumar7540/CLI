@@ -1,8 +1,8 @@
 package loggingaction
 
 import (
-	"code.cloudfoundry.org/cli/cf/errors"
 	"context"
+	"errors"
 	"log"
 	"strings"
 	"time"
@@ -10,7 +10,6 @@ import (
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 	"code.cloudfoundry.org/log-cache/pkg/rpc/logcache_v1"
-	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,48 +18,16 @@ const (
 	RecentLogsLines = 100
 )
 
-//TODO publicize fields and remove getters
 type LogMessage struct {
-	message        string
-	messageType    string
-	timestamp      time.Time
-	sourceType     string
-	sourceInstance string
-}
-
-func (l LogMessage) Message() string {
-	return l.message
-}
-
-func (l LogMessage) Type() string {
-	return l.messageType
+	Message        string
+	MessageType    string
+	Timestamp      time.Time
+	SourceType     string
+	SourceInstance string
 }
 
 func (l LogMessage) Staging() bool {
-	return l.sourceType == StagingLog
-}
-
-func (l LogMessage) Timestamp() time.Time {
-	return l.timestamp
-}
-
-func (l LogMessage) SourceType() string {
-	return l.sourceType
-}
-
-func (l LogMessage) SourceInstance() string {
-	return l.sourceInstance
-}
-
-//TODO this is only used in tests
-func NewLogMessage(message string, messageType int, timestamp time.Time, sourceType string, sourceInstance string) LogMessage {
-	return LogMessage{
-		message:        message,
-		messageType:    events.LogMessage_MessageType_name[int32(events.LogMessage_MessageType(messageType))],
-		timestamp:      timestamp,
-		sourceType:     sourceType,
-		sourceInstance: sourceInstance,
-	}
+	return l.SourceType == StagingLog
 }
 
 type channelWriter struct {
@@ -122,11 +89,11 @@ func convertEnvelopesToLogMessages(envelopes []*loggregator_v2.Envelope) []LogMe
 		log := logEnvelope.Log
 
 		logMessages = append(logMessages, LogMessage{
-			message:        string(log.Payload),
-			messageType:    loggregator_v2.Log_Type_name[int32(log.Type)],
-			timestamp:      time.Unix(0, envelope.GetTimestamp()),
-			sourceType:     envelope.GetTags()["source_type"],
-			sourceInstance: envelope.GetInstanceId(),
+			Message:        string(log.Payload),
+			MessageType:    loggregator_v2.Log_Type_name[int32(log.Type)],
+			Timestamp:      time.Unix(0, envelope.GetTimestamp()),
+			SourceType:     envelope.GetTags()["source_type"],
+			SourceInstance: envelope.GetInstanceId(),
 		})
 	}
 	return logMessages

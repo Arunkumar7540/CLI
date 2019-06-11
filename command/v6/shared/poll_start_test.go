@@ -61,18 +61,18 @@ var _ = Describe("Poll Start", func() {
 			appState <- v2action.ApplicationStateStarting
 			apiWarnings <- "some warning"
 			logErrs <- errors.New("some logErrhea")
-			messages <- loggingaction.NewLogMessage(
-				"some log message",
-				1,
-				time.Unix(0, 0),
-				"STG",
-				"some source instance")
-			messages <- loggingaction.NewLogMessage(
-				"some other log message",
-				1,
-				time.Unix(0, 0),
-				"APP",
-				"some other source instance")
+			messages <- loggingaction.LogMessage{
+				Message:        "some log message",
+				MessageType:    "OUT",
+				Timestamp:      time.Unix(0, 0),
+				SourceType:     "STG",
+				SourceInstance: "some source instance"}
+			messages <- loggingaction.LogMessage{
+				Message:        "some other log message",
+				MessageType:    "OUT",
+				Timestamp:      time.Unix(0, 0),
+				SourceType:     "APP",
+				SourceInstance: "some other source instance"}
 			close(appState)
 			apiWarnings <- "some other warning"
 			close(apiWarnings)

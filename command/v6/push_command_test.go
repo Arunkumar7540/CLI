@@ -201,8 +201,8 @@ var _ = Describe("push Command", func() {
 								errs := make(chan error)
 
 								go func() {
-									messages <- loggingaction.NewLogMessage("log message 1", 1, time.Unix(0, 0), "STG", "1")
-									messages <- loggingaction.NewLogMessage("log message 2", 1, time.Unix(0, 0), "STG", "1")
+									messages <- loggingaction.LogMessage{Message: "log message 1", MessageType: "OUT", Timestamp: time.Unix(0, 0), SourceType: "STG", SourceInstance: "1"}
+									messages <- loggingaction.LogMessage{Message: "log message 2", MessageType: "OUT", Timestamp: time.Unix(0, 0), SourceType: "STG", SourceInstance: "1"}
 									appState <- v2action.ApplicationStateStopping
 									appState <- v2action.ApplicationStateStaging
 									appState <- v2action.ApplicationStateStarting

@@ -30,24 +30,6 @@ var _ = Describe("Logging Actions", func() {
 		fakeConfig.AccessTokenReturns("AccessTokenForTest")
 	})
 
-	Describe("LogMessage", func() {
-		Describe("Staging", func() {
-			When("the log is a staging log", func() {
-				It("returns true", func() {
-					message := loggingaction.NewLogMessage("", 0, time.Now(), "STG", "")
-					Expect(message.Staging()).To(BeTrue())
-				})
-			})
-
-			When("the log is any other kind of log", func() {
-				It("returns false", func() {
-					message := loggingaction.NewLogMessage("", 0, time.Now(), "APP", "")
-					Expect(message.Staging()).To(BeFalse())
-				})
-			})
-		})
-	})
-
 	Describe("GetRecentLogsForApplicationByNameAndSpace", func() {
 		When("the application can be found", func() {
 			BeforeEach(func() {
@@ -104,17 +86,17 @@ var _ = Describe("Logging Actions", func() {
 					Expect(err).ToNot(HaveOccurred())
 					Expect(warnings).To(ConsistOf("some-app-warnings"))
 
-					Expect(messages[0].Message()).To(Equal("message-1"))
-					Expect(messages[0].Type()).To(Equal("OUT"))
-					Expect(messages[0].Timestamp()).To(Equal(time.Unix(0, 10)))
-					Expect(messages[0].SourceType()).To(Equal("some-source-type"))
-					Expect(messages[0].SourceInstance()).To(Equal("some-source-instance"))
+					Expect(messages[0].Message).To(Equal("message-1"))
+					Expect(messages[0].MessageType).To(Equal("OUT"))
+					Expect(messages[0].Timestamp).To(Equal(time.Unix(0, 10)))
+					Expect(messages[0].SourceType).To(Equal("some-source-type"))
+					Expect(messages[0].SourceInstance).To(Equal("some-source-instance"))
 
-					Expect(messages[1].Message()).To(Equal("message-2"))
-					Expect(messages[1].Type()).To(Equal("OUT"))
-					Expect(messages[1].Timestamp()).To(Equal(time.Unix(0, 20)))
-					Expect(messages[1].SourceType()).To(Equal("some-source-type"))
-					Expect(messages[1].SourceInstance()).To(Equal("some-source-instance"))
+					Expect(messages[1].Message).To(Equal("message-2"))
+					Expect(messages[1].MessageType).To(Equal("OUT"))
+					Expect(messages[1].Timestamp).To(Equal(time.Unix(0, 20)))
+					Expect(messages[1].SourceType).To(Equal("some-source-type"))
+					Expect(messages[1].SourceInstance).To(Equal("some-source-instance"))
 				})
 			})
 
@@ -237,9 +219,9 @@ var _ = Describe("Logging Actions", func() {
 
 				var message loggingaction.LogMessage
 				Eventually(messages).Should(Receive(&message))
-				Expect(message.Message()).To(Equal("message-1"))
+				Expect(message.Message).To(Equal("message-1"))
 				Eventually(messages).Should(Receive(&message))
-				Expect(message.Message()).To(Equal("message-2"))
+				Expect(message.Message).To(Equal("message-2"))
 			})
 		})
 

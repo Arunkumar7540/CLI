@@ -27,14 +27,14 @@ var _ = Describe("Logging Actions", func() {
 		Describe("Staging", func() {
 			When("the log is a staging log", func() {
 				It("returns true", func() {
-					message := loggingaction.NewLogMessage("", 0, time.Now(), "STG", "")
+					message := loggingaction.LogMessage{SourceType: "STG"}
 					Expect(message.Staging()).To(BeTrue())
 				})
 			})
 
 			When("the log is any other kind of log", func() {
 				It("returns false", func() {
-					message := loggingaction.NewLogMessage("", 0, time.Now(), "APP", "")
+					message := loggingaction.LogMessage{SourceType: "APP"}
 					Expect(message.Staging()).To(BeFalse())
 				})
 			})
@@ -111,9 +111,9 @@ var _ = Describe("Logging Actions", func() {
 				Eventually(messages).Should(HaveLen(4))
 				var message loggingaction.LogMessage
 				Expect(messages).To(Receive(&message))
-				Expect(message.Message()).To(Equal("message-1"))
+				Expect(message.Message).To(Equal("message-1"))
 				Expect(messages).To(Receive(&message))
-				Expect(message.Message()).To(Equal("message-2"))
+				Expect(message.Message).To(Equal("message-2"))
 
 				Expect(errs).ToNot(Receive())
 			})
@@ -257,17 +257,17 @@ var _ = Describe("Logging Actions", func() {
 					messages, err := loggingaction.GetRecentLogs("some-app-guid", fakeLogCacheClient)
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(messages[0].Message()).To(Equal("message-1"))
-					Expect(messages[0].Type()).To(Equal("OUT"))
-					Expect(messages[0].Timestamp()).To(Equal(time.Unix(0, 10)))
-					Expect(messages[0].SourceType()).To(Equal("some-source-type"))
-					Expect(messages[0].SourceInstance()).To(Equal("some-source-instance"))
+					Expect(messages[0].Message).To(Equal("message-1"))
+					Expect(messages[0].MessageType).To(Equal("OUT"))
+					Expect(messages[0].Timestamp).To(Equal(time.Unix(0, 10)))
+					Expect(messages[0].SourceType).To(Equal("some-source-type"))
+					Expect(messages[0].SourceInstance).To(Equal("some-source-instance"))
 
-					Expect(messages[1].Message()).To(Equal("message-2"))
-					Expect(messages[1].Type()).To(Equal("OUT"))
-					Expect(messages[1].Timestamp()).To(Equal(time.Unix(0, 20)))
-					Expect(messages[1].SourceType()).To(Equal("some-source-type"))
-					Expect(messages[1].SourceInstance()).To(Equal("some-source-instance"))
+					Expect(messages[1].Message).To(Equal("message-2"))
+					Expect(messages[1].MessageType).To(Equal("OUT"))
+					Expect(messages[1].Timestamp).To(Equal(time.Unix(0, 20)))
+					Expect(messages[1].SourceType).To(Equal("some-source-type"))
+					Expect(messages[1].SourceInstance).To(Equal("some-source-instance"))
 				})
 			})
 
